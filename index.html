@@ -37,37 +37,35 @@
 
   /* Header */
   header{
-    padding:20px 18px 54px;
+    padding:18px 18px 14px;
     display:flex;align-items:center;justify-content:space-between;
     position:sticky;top:0;z-index:10;
-    background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
-    border-radius:0 0 22px 22px;
-    box-shadow:0 4px 14px rgba(31,77,58,.18);
+    background:var(--bg);
+    border-bottom:3px solid var(--marigold);
   }
-  header .brand{display:flex;align-items:center;gap:10px;}
+  header .brand{display:flex;align-items:center;gap:9px;}
   header .brand .mark{
-    width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.18);
+    width:32px;height:32px;border-radius:9px;background:var(--green);
     display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-family:'Space Grotesk';
-    font-size:16px;border:1px solid rgba(255,255,255,.25);
   }
-  header h1{font-size:17px;margin:0;font-weight:600;color:#fff;}
-  header .sub{font-size:12px;color:rgba(255,255,255,.75);margin:0;}
-  #conn-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4);display:inline-block;}
-  #conn-dot.ok{background:var(--marigold);}
-  #conn-dot.bad{background:#ff8a70;}
+  header h1{font-size:17px;margin:0;font-weight:600;color:var(--ink);}
+  header .sub{font-size:12px;color:var(--ink-soft);margin:0;}
+  #conn-dot{width:8px;height:8px;border-radius:50%;background:#ccc;display:inline-block;}
+  #conn-dot.ok{background:var(--green);}
+  #conn-dot.bad{background:var(--red);}
 
-  main{padding:0 16px 16px;margin-top:-38px;}
+  main{padding:0 16px 16px;}
   .view{display:none;}
   .view.active{display:block;}
 
   /* Cards */
   .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
-  .stat{background:var(--card);border-radius:var(--radius);padding:14px;border:1px solid var(--line);box-shadow:0 2px 8px rgba(34,40,31,.05);position:relative;overflow:hidden;}
+  .stat{background:var(--card);border-radius:var(--radius);padding:14px;border:1px solid var(--line);border-left:4px solid var(--line);box-shadow:0 2px 8px rgba(34,40,31,.05);position:relative;overflow:hidden;}
   .stat .label{font-size:12px;color:var(--ink-soft);margin:0 0 4px;}
   .stat .num{font-size:21px;font-weight:600;margin:0;}
-  .stat.due{background:linear-gradient(135deg, #fff 60%, var(--red-soft) 100%);}
+  .stat.due{background:linear-gradient(135deg, #fff 55%, var(--red-soft) 100%);border-left-color:var(--red);}
   .stat.due .num{color:var(--red);}
-  .stat.profit{background:linear-gradient(135deg, #fff 60%, var(--green-soft) 100%);}
+  .stat.profit{background:linear-gradient(135deg, #fff 55%, var(--green-soft) 100%);border-left-color:var(--green);}
   .stat.profit .num{color:var(--green);}
   .stat .icon-badge{position:absolute;top:10px;right:10px;font-size:16px;opacity:.55;}
 
@@ -216,12 +214,7 @@
 
     <!-- HOME -->
     <section class="view active" id="view-home">
-      <div class="stat-grid">
-        <div class="stat profit">
-          <span class="icon-badge">💰</span>
-          <p class="label">This month profit</p>
-          <p class="num" id="stat-profit">SAR 0</p>
-        </div>
+      <div class="stat-grid" style="grid-template-columns:1fr;">
         <div class="stat due">
           <span class="icon-badge">📌</span>
           <p class="label">Total dues</p>
@@ -253,6 +246,10 @@
         <h2>All orders</h2>
         <a onclick="goto('purchase')">🛒 Purchase list</a>
       </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+        <input type="date" id="orders-date-filter" style="flex:1;" onchange="renderOrders()">
+        <button class="btn btn-outline" style="padding:11px 14px;white-space:nowrap;" onclick="document.getElementById('orders-date-filter').value=''; renderOrders();">All dates</button>
+      </div>
       <div class="list" id="orders-list"><div class="spinner"></div></div>
     </section>
 
@@ -268,6 +265,13 @@
 
     <!-- ACCOUNTS -->
     <section class="view" id="view-accounts">
+      <div class="stat-grid" style="grid-template-columns:1fr;">
+        <div class="stat profit">
+          <span class="icon-badge">💰</span>
+          <p class="label">This month profit</p>
+          <p class="num" id="stat-profit">SAR 0</p>
+        </div>
+      </div>
       <div class="section-title">
         <h2>Generate report</h2>
         <a onclick="openReportForm()">+ New report</a>
@@ -458,11 +462,17 @@ function orderCardHTML(o){
   const shopName = o.bt_shops?.name || 'Unknown shop';
   const itemCount = (o.bt_order_items||[]).length;
   const itemsLabel = (o.bt_order_items||[]).slice(0,2).map(i=>i.product_name).join(', ') + (itemCount>2 ? ` +${itemCount-2} more` : '');
+  const paid = Number(o.amount_paid)||0;
+  const balance = Number(o.total_amount) - paid;
+  const paidLine = o.status==='partial'
+    ? `<p class="meta" style="color:var(--green);">Paid ${fmt(paid)} · Balance ${fmt(balance)}</p>`
+    : '';
   return `<div class="row-card" onclick="viewOrder('${o.id}')">
     <div class="icon">${initials(shopName)}</div>
     <div class="body">
       <p class="title">${shopName}</p>
       <p class="meta">${itemsLabel || 'No items'} · ${itemCount} item${itemCount!==1?'s':''}</p>
+      ${paidLine}
     </div>
     <div class="right">
       <p class="amount">${fmt(o.total_amount)}</p>
@@ -553,11 +563,14 @@ async function viewShop(id){
 }
 
 /* ============ PAYMENTS ============ */
-function openPaymentForm(shopId){
+function openPaymentForm(shopId, orderId){
+  const order = orderId ? ORDERS.find(o=>o.id===orderId) : null;
+  const balance = order ? (Number(order.total_amount) - Number(order.amount_paid)) : null;
   openSheet(`
     <div class="sheet-head"><h3>Record payment</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    ${order ? `<p style="font-size:12.5px;color:var(--ink-soft);margin:-6px 0 12px;">For this order · Balance ${fmt(balance)}</p>` : `<p style="font-size:12.5px;color:var(--ink-soft);margin:-6px 0 12px;">Applied to oldest unpaid orders first.</p>`}
     <label>Amount (SAR)</label>
-    <input type="number" id="f-pay-amount" placeholder="0.00" step="0.01">
+    <input type="number" id="f-pay-amount" placeholder="0.00" step="0.01" value="${order?balance.toFixed(2):''}">
     <label>Date</label>
     <input type="date" id="f-pay-date" value="${new Date().toISOString().slice(0,10)}">
     <label>Method</label>
@@ -568,34 +581,73 @@ function openPaymentForm(shopId){
     </select>
     <label>Note</label>
     <input type="text" id="f-pay-note" placeholder="Optional">
-    <div style="margin-top:18px;"><button class="btn btn-primary" onclick="savePayment('${shopId}')">Save payment</button></div>
+    <div style="margin-top:18px;"><button class="btn btn-primary" onclick="savePayment('${shopId}', ${orderId?`'${orderId}'`:'null'})">Save payment</button></div>
   `);
 }
-async function savePayment(shopId){
+async function savePayment(shopId, orderId){
   const amount = parseFloat(document.getElementById('f-pay-amount').value);
   if(!amount || amount<=0){ toast('Enter a valid amount', true); return; }
-  const payload = {
-    shop_id: shopId,
-    amount,
-    payment_date: document.getElementById('f-pay-date').value,
-    method: document.getElementById('f-pay-method').value,
-    note: document.getElementById('f-pay-note').value.trim()
-  };
-  const {error} = await sb.from('bt_payments').insert(payload);
-  if(error){ toast(error.message, true); return; }
+  const date = document.getElementById('f-pay-date').value;
+  const method = document.getElementById('f-pay-method').value;
+  const note = document.getElementById('f-pay-note').value.trim();
+
+  if(orderId){
+    // pay this specific order directly
+    const order = ORDERS.find(o=>o.id===orderId);
+    const newPaid = Number(order.amount_paid) + amount;
+    const newStatus = newPaid >= Number(order.total_amount) - 0.01 ? 'paid' : 'partial';
+    const {error: e1} = await sb.from('bt_orders').update({amount_paid:newPaid, status:newStatus}).eq('id', orderId);
+    if(e1){ toast(e1.message, true); return; }
+    const {error: e2} = await sb.from('bt_payments').insert({shop_id:shopId, order_id:orderId, amount, payment_date:date, method, note});
+    if(e2){ toast(e2.message, true); return; }
+  } else {
+    // general payment: allocate across this shop's oldest unpaid orders first
+    let remaining = amount;
+    const dueOrders = ORDERS.filter(o=>o.shop_id===shopId && o.status!=='requested' && o.status!=='paid')
+      .sort((a,b)=> new Date(a.order_date) - new Date(b.order_date));
+    for(const order of dueOrders){
+      if(remaining<=0) break;
+      const orderBalance = Number(order.total_amount) - Number(order.amount_paid);
+      if(orderBalance<=0) continue;
+      const applied = Math.min(remaining, orderBalance);
+      const newPaid = Number(order.amount_paid) + applied;
+      const newStatus = newPaid >= Number(order.total_amount) - 0.01 ? 'paid' : 'partial';
+      await sb.from('bt_orders').update({amount_paid:newPaid, status:newStatus}).eq('id', order.id);
+      await sb.from('bt_payments').insert({shop_id:shopId, order_id:order.id, amount:applied, payment_date:date, method, note});
+      remaining -= applied;
+    }
+    if(remaining > 0){
+      // leftover with no due orders to apply to — record as a general credit
+      await sb.from('bt_payments').insert({shop_id:shopId, order_id:null, amount:remaining, payment_date:date, method, note: (note?note+' · ':'')+'Advance / no order to apply to'});
+    }
+  }
   toast('Payment recorded');
   closeSheet();
   await loadAll();
 }
 
 /* ============ ORDERS ============ */
+let ordersDateInitialized = false;
 function renderOrders(){
   const wrap = document.getElementById('orders-list');
+  const dateInput = document.getElementById('orders-date-filter');
+  if(dateInput && !ordersDateInitialized){
+    dateInput.value = new Date().toISOString().slice(0,10);
+    ordersDateInitialized = true;
+  }
+  const selectedDate = dateInput ? dateInput.value : '';
+
+  const filtered = selectedDate ? ORDERS.filter(o=>o.order_date===selectedDate) : ORDERS;
+
   if(ORDERS.length===0){
     wrap.innerHTML = emptyState('📦','No orders yet','Tap the + button to add your first order.');
     return;
   }
-  wrap.innerHTML = ORDERS.map(orderCardHTML).join('');
+  if(filtered.length===0){
+    wrap.innerHTML = emptyState('📅','No orders on this date','Try another date or tap "All dates".');
+    return;
+  }
+  wrap.innerHTML = filtered.map(orderCardHTML).join('');
 }
 
 let itemRowCount = 0;
@@ -711,6 +763,8 @@ function viewOrder(id){
 
   const shopName = o.bt_shops?.name || 'Unknown shop';
   const items = o.bt_order_items || [];
+  const paid = Number(o.amount_paid)||0;
+  const balance = Number(o.total_amount) - paid;
   openSheet(`
     <div class="sheet-head"><h3>${shopName}</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <p style="color:var(--ink-soft);font-size:12.5px;margin:-6px 0 14px;">${new Date(o.order_date).toDateString()} · <span class="tag ${o.status}">${o.status}</span></p>
@@ -723,11 +777,15 @@ function viewOrder(id){
         <div class="right"><p class="amount">${fmt(i.line_total)}</p></div>
       </div>`).join('')}
     </div>
-    <div class="order-total"><span>Total</span><span class="num">${fmt(o.total_amount)}</span></div>
+    <div class="stat-grid" style="margin-top:14px;">
+      <div class="stat"><p class="label">Total</p><p class="num">${fmt(o.total_amount)}</p></div>
+      <div class="stat profit"><p class="label">Paid</p><p class="num">${fmt(paid)}</p></div>
+    </div>
+    ${balance > 0.01 ? `<div class="stat due" style="margin-top:-8px;margin-bottom:14px;"><p class="label">Balance remaining</p><p class="num">${fmt(balance)}</p></div>` : ''}
     <p class="profit-note">Profit on this order: ${fmt(o.total_amount - o.total_cost)}</p>
     <div style="display:flex;gap:8px;margin-top:16px;">
       <button class="btn btn-outline" style="flex:1" onclick="printBill('${o.id}')">Print bill</button>
-      ${o.status !== 'paid' ? `<button class="btn btn-primary" style="flex:1" onclick="openPaymentForm('${o.shop_id}')">Record payment</button>` : ''}
+      ${o.status !== 'paid' ? `<button class="btn btn-primary" style="flex:1" onclick="openPaymentForm('${o.shop_id}', '${o.id}')">Record payment</button>` : ''}
     </div>
     <div style="text-align:center;margin-top:14px;">
       <button class="btn-danger-text" onclick="deleteOrder('${o.id}')">Cancel / delete this order</button>
