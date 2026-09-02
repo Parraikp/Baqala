@@ -242,8 +242,19 @@
     <section class="view" id="view-orders">
       <div class="section-title">
         <h2>All orders</h2>
+        <a onclick="goto('purchase')">🛒 Purchase list</a>
       </div>
       <div class="list" id="orders-list"><div class="spinner"></div></div>
+    </section>
+
+    <!-- PURCHASE LIST -->
+    <section class="view" id="view-purchase">
+      <div class="section-title">
+        <h2>Purchase list</h2>
+        <a onclick="goto('orders')">← Back</a>
+      </div>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 4px;">Consolidated from all pending shopkeeper requests, grouped by supplier.</p>
+      <div id="purchase-list-content"><div class="spinner"></div></div>
     </section>
 
     <!-- REPORTS -->
@@ -257,6 +268,9 @@
       </div>
       <div class="section-title"><h2>Shops by amount due</h2></div>
       <div class="list" id="rep-shops"><div class="spinner"></div></div>
+
+      <div class="section-title"><h2>Suppliers</h2><a onclick="openSupplierForm()">+ Add supplier</a></div>
+      <div id="suppliers-list"><div class="spinner"></div></div>
 
       <div class="section-title"><h2>Products</h2><a onclick="openProductForm()">+ Add product</a></div>
       <div id="products-list"><div class="spinner"></div></div>
@@ -301,7 +315,7 @@ const SUPABASE_KEY = "sb_publishable_nLudfpPOjErmQH5p8eTsxQ_fGTCFv3N";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ============ STATE ============ */
-let SHOPS = [], PRODUCTS = [], ORDERS = [], BALANCES = [];
+let SHOPS = [], PRODUCTS = [], ORDERS = [], BALANCES = [], SUPPLIERS = [];
 
 /* ============ HELPERS ============ */
 function fmt(n){ return 'SAR ' + (Number(n)||0).toLocaleString('en-US',{maximumFractionDigits:2}); }
@@ -326,23 +340,26 @@ function goto(view){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
-  const titles = {home:'Baqala Trader', shops:'Shops', orders:'Orders', reports:'Reports'};
+  const titles = {home:'Baqala Trader', shops:'Shops', orders:'Orders', reports:'Reports', purchase:'Purchase list'};
   document.getElementById('header-title').textContent = titles[view];
   if(view==='reports') renderReports();
+  if(view==='purchase') renderPurchaseList();
 }
 
 /* ============ LOAD DATA ============ */
 async function loadAll(){
   try{
-    const [shopsR, productsR, balancesR] = await Promise.all([
+    const [shopsR, productsR, balancesR, suppliersR] = await Promise.all([
       sb.from('bt_shops').select('*').order('name'),
       sb.from('bt_products').select('*').order('name'),
-      sb.from('bt_shop_balances').select('*')
+      sb.from('bt_shop_balances').select('*'),
+      sb.from('bt_suppliers').select('*').order('name')
     ]);
     if(shopsR.error) throw shopsR.error;
     SHOPS = shopsR.data || [];
     PRODUCTS = productsR.data || [];
     BALANCES = balancesR.data || [];
+    SUPPLIERS = suppliersR.data || [];
 
     const ordersR = await sb.from('bt_orders')
       .select('*, bt_shops(name), bt_order_items(*)')
@@ -356,6 +373,7 @@ async function loadAll(){
     renderShops();
     renderOrders();
     renderProducts();
+    renderSuppliers();
   }catch(err){
     console.error(err);
     setConn(false, err.message);
@@ -868,18 +886,22 @@ function renderProducts(){
     wrap.innerHTML = emptyState('🧺','No products yet','Add products so orders auto-fill prices.');
     return;
   }
-  wrap.innerHTML = PRODUCTS.map(p=>`
+  wrap.innerHTML = PRODUCTS.map(p=>{
+    const sup = SUPPLIERS.find(s=>s.id===p.supplier_id);
+    return `
     <div class="product-row">
       <div>
         <p class="pname">${p.name}</p>
-        <p class="pmeta">Cost ${fmt(p.cost_price)} · Sell ${fmt(p.sell_price)} / ${p.unit}</p>
+        <p class="pmeta">Cost ${fmt(p.cost_price)} · Sell ${fmt(p.sell_price)} / ${p.unit}${sup ? ' · from '+sup.name : ''}</p>
       </div>
       <button class="pedit" onclick='openProductForm(${JSON.stringify(p)})'>Edit</button>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 function openProductForm(existing){
   const p = existing || {};
+  const supplierOptions = '<option value="">Not set</option>' + SUPPLIERS.map(s=>`<option value="${s.id}" ${p.supplier_id===s.id?'selected':''}>${s.name}</option>`).join('');
   openSheet(`
     <div class="sheet-head"><h3>${existing?'Edit product':'Add product'}</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <label>Product name</label>
@@ -890,6 +912,8 @@ function openProductForm(existing){
       <div><label>Cost price (SAR)</label><input type="number" id="f-prod-cost" value="${p.cost_price||0}" step="0.01"></div>
       <div><label>Sell price (SAR)</label><input type="number" id="f-prod-price" value="${p.sell_price||0}" step="0.01"></div>
     </div>
+    <label>Buy from (supplier)</label>
+    <select id="f-prod-supplier">${supplierOptions}</select>
     <div style="margin-top:18px;"><button class="btn btn-primary" onclick="saveProduct('${existing?existing.id:''}')">Save product</button></div>
   `);
 }
@@ -900,7 +924,8 @@ async function saveProduct(id){
     name,
     unit: document.getElementById('f-prod-unit').value.trim() || 'pcs',
     cost_price: parseFloat(document.getElementById('f-prod-cost').value)||0,
-    sell_price: parseFloat(document.getElementById('f-prod-price').value)||0
+    sell_price: parseFloat(document.getElementById('f-prod-price').value)||0,
+    supplier_id: document.getElementById('f-prod-supplier').value || null
   };
   const q = id ? sb.from('bt_products').update(payload).eq('id', id) : sb.from('bt_products').insert(payload);
   const {error} = await q;
@@ -908,6 +933,125 @@ async function saveProduct(id){
   toast('Product saved');
   closeSheet();
   await loadAll();
+}
+
+/* ============ SUPPLIERS ============ */
+function renderSuppliers(){
+  const wrap = document.getElementById('suppliers-list');
+  if(!wrap) return;
+  if(SUPPLIERS.length===0){
+    wrap.innerHTML = emptyState('🚚','No suppliers yet','Add the retailers you buy from.');
+    return;
+  }
+  wrap.innerHTML = SUPPLIERS.map(s=>`
+    <div class="product-row">
+      <div>
+        <p class="pname">${s.name}</p>
+        <p class="pmeta">${s.contact_number || 'No contact number'}</p>
+      </div>
+      <button class="pedit" onclick='openSupplierForm(${JSON.stringify(s)})'>Edit</button>
+    </div>
+  `).join('');
+}
+function openSupplierForm(existing){
+  const s = existing || {};
+  openSheet(`
+    <div class="sheet-head"><h3>${existing?'Edit supplier':'Add supplier'}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <label>Supplier / retailer name</label>
+    <input type="text" id="f-sup-name" value="${s.name||''}" placeholder="e.g. Store A">
+    <label>WhatsApp / contact number</label>
+    <input type="text" id="f-sup-phone" value="${s.contact_number||''}" placeholder="e.g. 9665xxxxxxxx">
+    <label>Notes</label>
+    <input type="text" id="f-sup-notes" value="${s.notes||''}" placeholder="Optional">
+    <div style="margin-top:18px;"><button class="btn btn-primary" onclick="saveSupplier('${existing?existing.id:''}')">Save supplier</button></div>
+  `);
+}
+async function saveSupplier(id){
+  const name = document.getElementById('f-sup-name').value.trim();
+  if(!name){ toast('Supplier name is required', true); return; }
+  const payload = {
+    name,
+    contact_number: document.getElementById('f-sup-phone').value.trim(),
+    notes: document.getElementById('f-sup-notes').value.trim()
+  };
+  const q = id ? sb.from('bt_suppliers').update(payload).eq('id', id) : sb.from('bt_suppliers').insert(payload);
+  const {error} = await q;
+  if(error){ toast(error.message, true); return; }
+  toast('Supplier saved');
+  closeSheet();
+  await loadAll();
+}
+
+/* ============ PURCHASE LIST ============ */
+function renderPurchaseList(){
+  const wrap = document.getElementById('purchase-list-content');
+  const pending = ORDERS.filter(o=>o.status==='requested');
+  const items = [];
+  pending.forEach(o=> (o.bt_order_items||[]).forEach(i=> items.push(i)));
+
+  if(items.length===0){
+    wrap.innerHTML = emptyState('🛒','Nothing to buy yet','New shopkeeper requests will show up here to consolidate.');
+    return;
+  }
+
+  // aggregate by product_id (fallback to name) -> {name, qty, unit, supplier}
+  const agg = {};
+  items.forEach(i=>{
+    const key = i.product_id || ('name:'+i.product_name.toLowerCase());
+    if(!agg[key]) agg[key] = { name: i.product_name, qty: 0, product_id: i.product_id };
+    agg[key].qty += Number(i.quantity)||0;
+  });
+
+  // group by supplier
+  const groups = {}; // supplierKey -> {supplier, rows:[]}
+  Object.values(agg).forEach(row=>{
+    const prod = PRODUCTS.find(p=>p.id===row.product_id);
+    const sup = prod && prod.supplier_id ? SUPPLIERS.find(s=>s.id===prod.supplier_id) : null;
+    const key = sup ? sup.id : 'none';
+    if(!groups[key]) groups[key] = { supplier: sup, rows: [] };
+    groups[key].rows.push({ name: row.name, qty: row.qty, unit: prod ? prod.unit : '' });
+  });
+
+  wrap.innerHTML = Object.values(groups).map(g=>{
+    const supName = g.supplier ? g.supplier.name : 'No supplier set';
+    const rowsHtml = g.rows.map(r=>`<div class="row-card" style="cursor:default;">
+        <div class="body"><p class="title">${r.name}</p></div>
+        <div class="right"><p class="amount">${r.qty} ${r.unit||''}</p></div>
+      </div>`).join('');
+    const waText = encodeURIComponent(`Order for ${supName}:\n` + g.rows.map(r=>`- ${r.name}: ${r.qty} ${r.unit||''}`).join('\n'));
+    const waLink = g.supplier && g.supplier.contact_number
+      ? `https://wa.me/${g.supplier.contact_number.replace(/[^0-9]/g,'')}?text=${waText}`
+      : `https://wa.me/?text=${waText}`;
+    return `<div class="section-title" style="margin-top:18px;"><h2>${supName}</h2></div>
+      <div class="list">${rowsHtml}</div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <a href="${waLink}" target="_blank" class="btn btn-outline" style="flex:1;text-decoration:none;">Send WhatsApp</a>
+        <button class="btn btn-primary" style="flex:1" onclick='printPurchaseList(${JSON.stringify(supName)}, ${JSON.stringify(g.rows)})'>Print list</button>
+      </div>`;
+  }).join('');
+}
+function printPurchaseList(supName, rows){
+  const rowsHtml = rows.map(r=>`<tr><td>${r.name}</td><td class="c">${r.qty} ${r.unit||''}</td></tr>`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`
+    <html><head><title>Purchase list — ${supName}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:20px;color:#1a1a1a;}
+      h1{font-size:17px;margin:0 0 2px;}
+      p.sub{color:#666;font-size:12px;margin:0 0 16px;}
+      table{width:100%;border-collapse:collapse;}
+      th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #ddd;font-size:14px;}
+      th{color:#666;}
+      td.c,th.c{text-align:right;}
+    </style></head>
+    <body>
+      <h1>Purchase list</h1>
+      <p class="sub">To buy from: ${supName} · ${new Date().toLocaleDateString('en-GB')}</p>
+      <table><tr><th>Item</th><th class="c">Quantity</th></tr>${rowsHtml}</table>
+      <script>window.print();<\/script>
+    </body></html>
+  `);
+  w.document.close();
 }
 
 /* ============ REPORTS ============ */
