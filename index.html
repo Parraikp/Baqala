@@ -757,7 +757,7 @@ function printBill(orderId){
   const render = (order)=>{
     const shopName = order.bt_shops?.name || SHOPS.find(s=>s.id===order.shop_id)?.name || 'Shop';
     const items = order.bt_order_items || [];
-    const ref = order.id.slice(0,8).toUpperCase();
+    const billNo = order.bill_number ? String(order.bill_number).padStart(4,'0') : '----';
     const dateStr = new Date(order.order_date).toLocaleDateString('en-GB');
     const rows = items.map(i=>`
       <tr>
@@ -766,7 +766,7 @@ function printBill(orderId){
         <td class="c">${Number(i.unit_price).toFixed(2)}</td>
         <td class="c">${Number(i.line_total).toFixed(2)}</td>
       </tr>`).join('');
-    const blankRows = Array.from({length: Math.max(0, 9 - items.length)}).map(()=>`
+    const blankRows = Array.from({length: Math.max(0, 15 - items.length)}).map(()=>`
       <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
 
     const w = window.open('', '_blank');
@@ -777,17 +777,21 @@ function printBill(orderId){
         *{box-sizing:border-box;}
         body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:0;font-size:12px;}
         .sheet{width:100%;height:100%;padding:4mm;}
-        .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a1a1a;padding-bottom:8px;margin-bottom:10px;}
+        .head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px;}
         .head .en{text-align:left;}
         .head .ar{text-align:right;direction:rtl;}
-        .head .brand{font-size:20px;font-weight:bold;margin:0;letter-spacing:0.5px;}
-        .head .brand-ar{font-size:20px;font-weight:bold;margin:0;}
-        .head .sub{font-size:11px;color:#1a1a1a;margin:2px 0 0;font-weight:bold;}
-        .head .ref{font-size:12px;color:#b3452e;font-weight:bold;margin-top:4px;}
+        .head .brand{font-size:20px;font-weight:bold;margin:0;letter-spacing:0.5px;color:#1a3b8f;}
+        .head .brand-ar{font-size:20px;font-weight:bold;margin:0;color:#1a3b8f;}
+        .head .sub{font-size:11px;color:#1a3b8f;margin:2px 0 0;font-weight:bold;}
+        .head .ref{font-size:12px;color:#8B0000;font-weight:bold;margin-top:4px;}
+        .head .center{text-align:center;}
+        .head .cart{font-size:30px;line-height:1;}
+        .head .fatura-ar{font-size:15px;font-weight:bold;color:#1a3b8f;margin:3px 0 0;direction:rtl;}
+        .head .fatura-en{font-size:11px;color:#1a3b8f;margin:1px 0 0;letter-spacing:1px;}
         .meta{display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;padding:0 2px;}
         .meta .ar{direction:rtl;}
-        table{width:100%;border-collapse:collapse;border:1.5px solid #1a1a1a;}
-        th,td{border:1px solid #1a1a1a;padding:6px 8px;font-size:12px;}
+        table{width:100%;border-collapse:collapse;border:1.5px solid #000;}
+        th,td{border:1px solid #000;padding:6px 8px;font-size:12px;}
         th{background:#f0f0ee;text-align:center;font-weight:bold;}
         th .en{display:block;font-size:11px;}
         th .ar{display:block;font-size:11px;direction:rtl;color:#333;}
@@ -796,7 +800,7 @@ function printBill(orderId){
         .total-row td{font-weight:bold;background:#f7f5f0;}
         .total-row td.desc{text-align:right;direction:rtl;}
         .foot{display:flex;justify-content:space-between;margin-top:22px;font-size:12px;}
-        .foot .line{border-top:1px solid #1a1a1a;width:150px;text-align:center;padding-top:4px;}
+        .foot .line{border-top:1px solid #000;width:150px;text-align:center;padding-top:4px;}
         @media print{ .noprint{display:none;} }
       </style></head>
       <body>
@@ -805,7 +809,12 @@ function printBill(orderId){
             <div class="en">
               <p class="brand">Supplies</p>
               <p class="sub">For foodstuffs</p>
-              <p class="ref">Ref: ${ref} &nbsp;|&nbsp; ${dateStr}</p>
+              <p class="ref">Bill No: ${billNo} &nbsp;|&nbsp; ${dateStr}</p>
+            </div>
+            <div class="center">
+              <div class="cart">🛒</div>
+              <p class="fatura-ar">فاتورة</p>
+              <p class="fatura-en">INVOICE</p>
             </div>
             <div class="ar">
               <p class="brand-ar">تموينات</p>
