@@ -779,7 +779,7 @@ function printBill(orderId){
           ${rows}
           <tr class="total-row"><td colspan="3">Total</td><td>SAR ${Number(order.total_amount).toLocaleString()}</td></tr>
         </table>
-        <script>window.print();</script>
+        <script>window.print();<\/script>
       </body></html>
     `);
     w.document.close();
