@@ -110,7 +110,7 @@
 
     <div class="tabs">
       <button class="active" id="tab-new">+ New order</button>
-      <button id="tab-history">📋 My orders</button>
+      <button id="tab-history">🧾 My bills</button>
     </div>
 
     <div id="new-order-panel">
@@ -140,7 +140,7 @@
         <thead><tr><th style="width:12%;">#</th><th>Item</th><th class="c">Qty</th></tr></thead>
         <tbody id="detail-items"></tbody>
       </table>
-      <p style="text-align:right;font-weight:700;margin-top:10px;" id="detail-total"></p>
+      <div id="detail-total"></div>
     </div>
   </div>
 
@@ -229,12 +229,30 @@ async function loadOrderHistory(){
   wrap.innerHTML = shopOrders.map((o,idx)=>{
     const itemCount = (o.bt_order_items||[]).length;
     const dateStr = new Date(o.order_date).toDateString();
-    const amountLine = o.status==='requested' ? 'Waiting for price' : fmt(o.total_amount);
+    const billNo = o.bill_number ? '#'+String(o.bill_number).padStart(4,'0') : null;
+    const paid = Number(o.amount_paid)||0;
+    const balance = Number(o.total_amount) - paid;
+
+    let amountLine, subLine;
+    if(o.status==='requested'){
+      amountLine = 'Waiting for price';
+      subLine = `${itemCount} item${itemCount!==1?'s':''}`;
+    } else if(o.status==='paid'){
+      amountLine = fmt(o.total_amount);
+      subLine = `${billNo||''} · Fully paid`;
+    } else if(o.status==='partial'){
+      amountLine = fmt(balance) + ' left';
+      subLine = `${billNo||''} · Paid ${fmt(paid)} of ${fmt(o.total_amount)}`;
+    } else {
+      amountLine = fmt(o.total_amount);
+      subLine = `${billNo||''} · Nothing paid yet`;
+    }
+
     return `<div class="order-card" onclick="viewOrderDetail(${idx})">
       <div class="top-row">
         <div>
           <p class="date">${dateStr}</p>
-          <p class="items-count">${itemCount} item${itemCount!==1?'s':''}</p>
+          <p class="items-count">${subLine}</p>
         </div>
         <div style="text-align:right;">
           <p class="amt">${amountLine}</p>
@@ -249,13 +267,33 @@ window.viewOrderDetail = function(idx){
   const items = o.bt_order_items || [];
   document.getElementById('order-step').classList.add('hide');
   document.getElementById('detail-step').classList.remove('hide');
-  document.getElementById('detail-date').textContent = new Date(o.order_date).toDateString();
+  const billNo = o.bill_number ? 'Bill #'+String(o.bill_number).padStart(4,'0') : new Date(o.order_date).toDateString();
+  document.getElementById('detail-date').textContent = billNo;
   document.getElementById('detail-status').textContent = o.status;
   document.getElementById('detail-status').className = 'tag ' + o.status;
   document.getElementById('detail-items').innerHTML = items.map((i,n)=>`
     <tr><td class="c">${n+1}</td><td>${i.product_name}</td><td class="c">${i.quantity}</td></tr>
   `).join('');
-  document.getElementById('detail-total').textContent = o.status==='requested' ? 'Waiting for price to be added' : 'Total: ' + fmt(o.total_amount);
+
+  const paid = Number(o.amount_paid)||0;
+  const balance = Number(o.total_amount) - paid;
+  let totalHtml;
+  if(o.status==='requested'){
+    totalHtml = `<p style="text-align:center;color:var(--ink-soft);margin-top:10px;">Waiting for price to be added</p>`;
+  } else {
+    totalHtml = `
+      <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:13.5px;">
+        <span style="color:var(--ink-soft);">Total</span><span style="font-weight:700;">${fmt(o.total_amount)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:13.5px;">
+        <span style="color:var(--ink-soft);">Paid</span><span style="font-weight:700;color:var(--green);">${fmt(paid)}</span>
+      </div>
+      ${balance > 0.01 ? `<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:13.5px;">
+        <span style="color:var(--ink-soft);">Balance remaining</span><span style="font-weight:700;color:var(--red);">${fmt(balance)}</span>
+      </div>` : `<p style="text-align:center;color:var(--green);font-weight:700;margin-top:8px;">✅ Fully paid</p>`}
+    `;
+  }
+  document.getElementById('detail-total').innerHTML = totalHtml;
 };
 document.getElementById('detail-back').addEventListener('click', ()=>{
   document.getElementById('detail-step').classList.add('hide');
