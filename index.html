@@ -699,6 +699,9 @@ function viewOrder(id){
       <button class="btn btn-outline" style="flex:1" onclick="printBill('${o.id}')">Print bill</button>
       ${o.status !== 'paid' ? `<button class="btn btn-primary" style="flex:1" onclick="openPaymentForm('${o.shop_id}')">Record payment</button>` : ''}
     </div>
+    <div style="text-align:center;margin-top:14px;">
+      <button class="btn-danger-text" onclick="deleteOrder('${o.id}')">Cancel / delete this order</button>
+    </div>
   `);
 }
 
@@ -727,6 +730,9 @@ function openPricingForm(o){
     <div class="order-total"><span>Order total</span><span class="num" id="pricing-total">SAR 0</span></div>
     <p class="profit-note" id="pricing-profit-note">Profit: SAR 0</p>
     <div style="margin-top:16px;"><button class="btn btn-primary" onclick="saveOrderPricing('${o.id}')">Save & mark ready</button></div>
+    <div style="text-align:center;margin-top:12px;">
+      <button class="btn-danger-text" onclick="deleteOrder('${o.id}')">Cancel this request</button>
+    </div>
   `);
   updatePricingTotal();
 }
@@ -767,6 +773,15 @@ async function saveOrderPricing(orderId){
   closeSheet();
   await loadAll();
   printBill(orderId);
+}
+
+async function deleteOrder(orderId){
+  if(!confirm('Delete this order? This cannot be undone.')) return;
+  const {error} = await sb.from('bt_orders').delete().eq('id', orderId);
+  if(error){ toast(error.message, true); return; }
+  toast('Order deleted');
+  closeSheet();
+  await loadAll();
 }
 
 /* ---- Print bill ---- */
