@@ -782,7 +782,7 @@ function printBill(orderId){
         .head .ar{text-align:right;direction:rtl;}
         .head .brand{font-size:20px;font-weight:bold;margin:0;letter-spacing:0.5px;}
         .head .brand-ar{font-size:20px;font-weight:bold;margin:0;}
-        .head .sub{font-size:11px;color:#555;margin:2px 0 0;}
+        .head .sub{font-size:11px;color:#1a1a1a;margin:2px 0 0;font-weight:bold;}
         .head .ref{font-size:12px;color:#b3452e;font-weight:bold;margin-top:4px;}
         .meta{display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;padding:0 2px;}
         .meta .ar{direction:rtl;}
@@ -803,13 +803,13 @@ function printBill(orderId){
         <div class="sheet">
           <div class="head">
             <div class="en">
-              <p class="brand">Baqala Trader</p>
-              <p class="sub">Supplies for foodstuffs</p>
+              <p class="brand">Supplies</p>
+              <p class="sub">For foodstuffs</p>
               <p class="ref">Ref: ${ref} &nbsp;|&nbsp; ${dateStr}</p>
             </div>
             <div class="ar">
-              <p class="brand-ar">تاجر البقالة</p>
-              <p class="sub">توريد المواد الغذائية</p>
+              <p class="brand-ar">تموينات</p>
+              <p class="sub">للمواد الغذائية</p>
             </div>
           </div>
           <div class="meta">
