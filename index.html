@@ -37,35 +37,42 @@
 
   /* Header */
   header{
-    padding:18px 18px 14px;
+    padding:20px 18px 54px;
     display:flex;align-items:center;justify-content:space-between;
-    position:sticky;top:0;background:var(--bg);z-index:10;
+    position:sticky;top:0;z-index:10;
+    background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+    border-radius:0 0 22px 22px;
+    box-shadow:0 4px 14px rgba(31,77,58,.18);
   }
-  header .brand{display:flex;align-items:center;gap:9px;}
+  header .brand{display:flex;align-items:center;gap:10px;}
   header .brand .mark{
-    width:32px;height:32px;border-radius:9px;background:var(--green);
+    width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.18);
     display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-family:'Space Grotesk';
+    font-size:16px;border:1px solid rgba(255,255,255,.25);
   }
-  header h1{font-size:17px;margin:0;font-weight:600;}
-  header .sub{font-size:12px;color:var(--ink-soft);margin:0;}
-  #conn-dot{width:8px;height:8px;border-radius:50%;background:#ccc;display:inline-block;}
-  #conn-dot.ok{background:var(--green);}
-  #conn-dot.bad{background:var(--red);}
+  header h1{font-size:17px;margin:0;font-weight:600;color:#fff;}
+  header .sub{font-size:12px;color:rgba(255,255,255,.75);margin:0;}
+  #conn-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4);display:inline-block;}
+  #conn-dot.ok{background:var(--marigold);}
+  #conn-dot.bad{background:#ff8a70;}
 
-  main{padding:0 16px 16px;}
+  main{padding:0 16px 16px;margin-top:-38px;}
   .view{display:none;}
   .view.active{display:block;}
 
   /* Cards */
   .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
-  .stat{background:var(--card);border-radius:var(--radius);padding:14px;border:1px solid var(--line);}
+  .stat{background:var(--card);border-radius:var(--radius);padding:14px;border:1px solid var(--line);box-shadow:0 2px 8px rgba(34,40,31,.05);position:relative;overflow:hidden;}
   .stat .label{font-size:12px;color:var(--ink-soft);margin:0 0 4px;}
   .stat .num{font-size:21px;font-weight:600;margin:0;}
+  .stat.due{background:linear-gradient(135deg, #fff 60%, var(--red-soft) 100%);}
   .stat.due .num{color:var(--red);}
+  .stat.profit{background:linear-gradient(135deg, #fff 60%, var(--green-soft) 100%);}
   .stat.profit .num{color:var(--green);}
+  .stat .icon-badge{position:absolute;top:10px;right:10px;font-size:16px;opacity:.55;}
 
   .section-title{display:flex;align-items:center;justify-content:space-between;margin:20px 0 10px;}
-  .section-title h2{font-size:14px;font-weight:600;margin:0;color:var(--ink);}
+  .section-title h2{font-size:14px;font-weight:600;margin:0;color:var(--ink);padding-left:9px;border-left:3px solid var(--marigold);}
   .section-title a{font-size:12px;color:var(--green);cursor:pointer;font-weight:500;}
 
   .list{display:flex;flex-direction:column;gap:8px;}
@@ -211,10 +218,12 @@
     <section class="view active" id="view-home">
       <div class="stat-grid">
         <div class="stat profit">
+          <span class="icon-badge">💰</span>
           <p class="label">This month profit</p>
           <p class="num" id="stat-profit">SAR 0</p>
         </div>
         <div class="stat due">
+          <span class="icon-badge">📌</span>
           <p class="label">Total dues</p>
           <p class="num" id="stat-due">SAR 0</p>
         </div>
@@ -257,6 +266,19 @@
       <div id="purchase-list-content"><div class="spinner"></div></div>
     </section>
 
+    <!-- ACCOUNTS -->
+    <section class="view" id="view-accounts">
+      <div class="section-title">
+        <h2>Generate report</h2>
+        <a onclick="openReportForm()">+ New report</a>
+      </div>
+      <div class="section-title" style="margin-top:20px;"><h2>Shop accounts</h2></div>
+      <div class="list" id="acc-shops-list"><div class="spinner"></div></div>
+
+      <div class="section-title" style="margin-top:20px;"><h2>Supplier accounts</h2></div>
+      <div class="list" id="acc-suppliers-list"><div class="spinner"></div></div>
+    </section>
+
     <!-- REPORTS -->
     <section class="view" id="view-reports">
       <div class="section-title"><h2>This month</h2></div>
@@ -293,6 +315,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2l1 4h10l1-4"/><rect x="4" y="6" width="16" height="15" rx="2"/></svg>
       <span>Orders</span>
     </button>
+    <button class="tab-btn" data-view="accounts" onclick="goto('accounts')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg>
+      <span>Accounts</span>
+    </button>
     <button class="tab-btn" data-view="reports" onclick="goto('reports')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
       <span>Reports</span>
@@ -315,7 +341,7 @@ const SUPABASE_KEY = "sb_publishable_nLudfpPOjErmQH5p8eTsxQ_fGTCFv3N";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ============ STATE ============ */
-let SHOPS = [], PRODUCTS = [], ORDERS = [], BALANCES = [], SUPPLIERS = [];
+let SHOPS = [], PRODUCTS = [], ORDERS = [], BALANCES = [], SUPPLIERS = [], PAYMENTS = [];
 
 /* ============ HELPERS ============ */
 function fmt(n){ return 'SAR ' + (Number(n)||0).toLocaleString('en-US',{maximumFractionDigits:2}); }
@@ -340,26 +366,29 @@ function goto(view){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
-  const titles = {home:'Baqala Trader', shops:'Shops', orders:'Orders', reports:'Reports', purchase:'Purchase list'};
+  const titles = {home:'Baqala Trader', shops:'Shops', orders:'Orders', reports:'Reports', purchase:'Purchase list', accounts:'Accounts'};
   document.getElementById('header-title').textContent = titles[view];
   if(view==='reports') renderReports();
   if(view==='purchase') renderPurchaseList();
+  if(view==='accounts') renderAccounts();
 }
 
 /* ============ LOAD DATA ============ */
 async function loadAll(){
   try{
-    const [shopsR, productsR, balancesR, suppliersR] = await Promise.all([
+    const [shopsR, productsR, balancesR, suppliersR, paymentsR] = await Promise.all([
       sb.from('bt_shops').select('*').order('name'),
       sb.from('bt_products').select('*').order('name'),
       sb.from('bt_shop_balances').select('*'),
-      sb.from('bt_suppliers').select('*').order('name')
+      sb.from('bt_suppliers').select('*').order('name'),
+      sb.from('bt_payments').select('*').order('payment_date', {ascending:false})
     ]);
     if(shopsR.error) throw shopsR.error;
     SHOPS = shopsR.data || [];
     PRODUCTS = productsR.data || [];
     BALANCES = balancesR.data || [];
     SUPPLIERS = suppliersR.data || [];
+    PAYMENTS = paymentsR.data || [];
 
     const ordersR = await sb.from('bt_orders')
       .select('*, bt_shops(name), bt_order_items(*)')
@@ -374,6 +403,7 @@ async function loadAll(){
     renderOrders();
     renderProducts();
     renderSuppliers();
+    if(document.getElementById('view-accounts').classList.contains('active')) renderAccounts();
   }catch(err){
     console.error(err);
     setConn(false, err.message);
@@ -782,6 +812,249 @@ async function deleteOrder(orderId){
   toast('Order deleted');
   closeSheet();
   await loadAll();
+}
+
+/* ============ ACCOUNTS ============ */
+function renderAccounts(){
+  // Shop accounts
+  const shopsWrap = document.getElementById('acc-shops-list');
+  if(SHOPS.length===0){
+    shopsWrap.innerHTML = emptyState('🏪','No shops yet','');
+  } else {
+    shopsWrap.innerHTML = [...SHOPS].sort((a,b)=>{
+      const balA = BALANCES.find(x=>x.shop_id===a.id)?.balance_due || 0;
+      const balB = BALANCES.find(x=>x.shop_id===b.id)?.balance_due || 0;
+      return balB - balA;
+    }).map(s=>{
+      const bal = BALANCES.find(b=>b.shop_id===s.id);
+      const due = bal ? Number(bal.balance_due) : 0;
+      return `<div class="row-card" onclick="viewShopLedger('${s.id}')">
+        <div class="icon">${initials(s.name)}</div>
+        <div class="body"><p class="title">${s.name}</p><p class="meta">Total ordered ${fmt(bal?bal.total_ordered:0)}</p></div>
+        <div class="right"><p class="amount" style="${due>0?'color:var(--red)':'color:var(--green)'}">${fmt(due)}</p></div>
+      </div>`;
+    }).join('');
+  }
+
+  // Supplier accounts
+  const supWrap = document.getElementById('acc-suppliers-list');
+  if(SUPPLIERS.length===0){
+    supWrap.innerHTML = emptyState('🚚','No suppliers yet','');
+  } else {
+    const spendBySupplier = computeAllSupplierSpend();
+    supWrap.innerHTML = [...SUPPLIERS].sort((a,b)=> (spendBySupplier[b.id]||0) - (spendBySupplier[a.id]||0)).map(s=>{
+      const spend = spendBySupplier[s.id] || 0;
+      return `<div class="row-card" onclick="viewSupplierLedger('${s.id}')">
+        <div class="icon" style="background:var(--marigold-soft);color:#8a6417;">${initials(s.name)}</div>
+        <div class="body"><p class="title">${s.name}</p><p class="meta">${s.contact_number||'No contact'}</p></div>
+        <div class="right"><p class="amount">${fmt(spend)}</p></div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function computeAllSupplierSpend(){
+  const spend = {};
+  ORDERS.filter(o=>o.status!=='requested').forEach(o=>{
+    (o.bt_order_items||[]).forEach(i=>{
+      const prod = PRODUCTS.find(p=>p.id===i.product_id);
+      if(prod && prod.supplier_id){
+        spend[prod.supplier_id] = (spend[prod.supplier_id]||0) + Number(i.quantity)*Number(i.unit_cost);
+      }
+    });
+  });
+  return spend;
+}
+
+function viewShopLedger(shopId){
+  const s = SHOPS.find(x=>x.id===shopId);
+  if(!s) return;
+  const bal = BALANCES.find(b=>b.shop_id===shopId) || {total_ordered:0,total_paid:0,balance_due:0};
+  const entries = [];
+  ORDERS.filter(o=>o.shop_id===shopId && o.status!=='requested').forEach(o=>{
+    entries.push({date:o.order_date, type:'charge', label:`Order #${o.bill_number?String(o.bill_number).padStart(4,'0'):'-'}`, amount:Number(o.total_amount)});
+  });
+  PAYMENTS.filter(p=>p.shop_id===shopId).forEach(p=>{
+    entries.push({date:p.payment_date, type:'payment', label:`Payment (${p.method||'cash'})`, amount:-Number(p.amount)});
+  });
+  entries.sort((a,b)=> new Date(b.date) - new Date(a.date));
+
+  openSheet(`
+    <div class="sheet-head"><h3>${s.name} — Ledger</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="stat-grid">
+      <div class="stat"><p class="label">Total ordered</p><p class="num">${fmt(bal.total_ordered)}</p></div>
+      <div class="stat due"><p class="label">Balance due</p><p class="num">${fmt(bal.balance_due)}</p></div>
+    </div>
+    <div class="list">
+      ${entries.length ? entries.map(e=>`
+        <div class="row-card" style="cursor:default;">
+          <div class="icon" style="background:${e.type==='payment'?'var(--green-soft)':'var(--marigold-soft)'};color:${e.type==='payment'?'var(--green)':'#8a6417'};">${e.type==='payment'?'↓':'↑'}</div>
+          <div class="body"><p class="title">${e.label}</p><p class="meta">${new Date(e.date).toDateString()}</p></div>
+          <div class="right"><p class="amount" style="color:${e.type==='payment'?'var(--green)':'var(--ink)'}">${e.type==='payment'?'-':''}${fmt(Math.abs(e.amount))}</p></div>
+        </div>`).join('') : emptyState('📋','No activity yet','')}
+    </div>
+  `);
+}
+
+function viewSupplierLedger(supplierId){
+  const s = SUPPLIERS.find(x=>x.id===supplierId);
+  if(!s) return;
+  const rows = [];
+  ORDERS.filter(o=>o.status!=='requested').forEach(o=>{
+    (o.bt_order_items||[]).forEach(i=>{
+      const prod = PRODUCTS.find(p=>p.id===i.product_id);
+      if(prod && prod.supplier_id===supplierId){
+        rows.push({date:o.order_date, name:i.product_name, qty:i.quantity, cost: Number(i.quantity)*Number(i.unit_cost)});
+      }
+    });
+  });
+  rows.sort((a,b)=> new Date(b.date) - new Date(a.date));
+  const total = rows.reduce((sum,r)=>sum+r.cost,0);
+
+  openSheet(`
+    <div class="sheet-head"><h3>${s.name} — Purchases</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="stat-grid">
+      <div class="stat"><p class="label">Total bought</p><p class="num">${fmt(total)}</p></div>
+      <div class="stat"><p class="label">Items purchased</p><p class="num">${rows.length}</p></div>
+    </div>
+    <div class="list">
+      ${rows.length ? rows.map(r=>`
+        <div class="row-card" style="cursor:default;">
+          <div class="body"><p class="title">${r.name}</p><p class="meta">${r.qty} · ${new Date(r.date).toDateString()}</p></div>
+          <div class="right"><p class="amount">${fmt(r.cost)}</p></div>
+        </div>`).join('') : emptyState('🚚','No purchases yet','')}
+    </div>
+  `);
+}
+
+/* ---- Report generator ---- */
+function openReportForm(){
+  const today = new Date().toISOString().slice(0,10);
+  const monthStart = today.slice(0,8)+'01';
+  openSheet(`
+    <div class="sheet-head"><h3>Generate report</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <label>From date</label>
+    <input type="date" id="f-rep-from" value="${monthStart}">
+    <label>To date</label>
+    <input type="date" id="f-rep-to" value="${today}">
+    <div style="margin-top:16px;"><button class="btn btn-primary" onclick="generateReport()">View report</button></div>
+  `);
+}
+function generateReport(){
+  const from = document.getElementById('f-rep-from').value;
+  const to = document.getElementById('f-rep-to').value;
+  if(!from || !to){ toast('Pick both dates', true); return; }
+
+  const rangeOrders = ORDERS.filter(o=>o.status!=='requested' && o.order_date>=from && o.order_date<=to);
+  const rangePayments = PAYMENTS.filter(p=>p.payment_date>=from && p.payment_date<=to);
+
+  let revenue=0, cost=0;
+  rangeOrders.forEach(o=>{ revenue+=Number(o.total_amount); cost+=Number(o.total_cost); });
+  const profit = revenue-cost;
+  const collected = rangePayments.reduce((s,p)=>s+Number(p.amount),0);
+
+  // by shop
+  const byShop = {};
+  rangeOrders.forEach(o=>{
+    const name = o.bt_shops?.name || SHOPS.find(s=>s.id===o.shop_id)?.name || 'Unknown';
+    if(!byShop[name]) byShop[name] = {orders:0, amount:0};
+    byShop[name].orders++; byShop[name].amount += Number(o.total_amount);
+  });
+  // by supplier
+  const bySupplier = {};
+  rangeOrders.forEach(o=> (o.bt_order_items||[]).forEach(i=>{
+    const prod = PRODUCTS.find(p=>p.id===i.product_id);
+    const supName = prod && prod.supplier_id ? (SUPPLIERS.find(s=>s.id===prod.supplier_id)?.name || 'Unknown') : 'No supplier set';
+    bySupplier[supName] = (bySupplier[supName]||0) + Number(i.quantity)*Number(i.unit_cost);
+  }));
+
+  window._reportData = { from, to, revenue, cost, profit, collected, orderCount: rangeOrders.length, byShop, bySupplier, rangeOrders };
+
+  openSheet(`
+    <div class="sheet-head"><h3>Report: ${from} → ${to}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="stat-grid">
+      <div class="stat"><p class="label">Orders</p><p class="num">${rangeOrders.length}</p></div>
+      <div class="stat profit"><p class="label">Profit</p><p class="num">${fmt(profit)}</p></div>
+      <div class="stat"><p class="label">Revenue</p><p class="num">${fmt(revenue)}</p></div>
+      <div class="stat"><p class="label">Collected</p><p class="num">${fmt(collected)}</p></div>
+    </div>
+    <div class="section-title"><h2>By shop</h2></div>
+    <div class="list">${Object.entries(byShop).map(([name,d])=>`
+      <div class="row-card" style="cursor:default;">
+        <div class="body"><p class="title">${name}</p><p class="meta">${d.orders} order${d.orders!==1?'s':''}</p></div>
+        <div class="right"><p class="amount">${fmt(d.amount)}</p></div>
+      </div>`).join('') || emptyState('📋','No orders in this range','')}
+    </div>
+    <div class="section-title"><h2>By supplier</h2></div>
+    <div class="list">${Object.entries(bySupplier).map(([name,amt])=>`
+      <div class="row-card" style="cursor:default;">
+        <div class="body"><p class="title">${name}</p></div>
+        <div class="right"><p class="amount">${fmt(amt)}</p></div>
+      </div>`).join('') || emptyState('🚚','No purchases in this range','')}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-outline" style="flex:1" onclick="downloadReportCSV()">Download CSV</button>
+      <button class="btn btn-primary" style="flex:1" onclick="printReport()">Print report</button>
+    </div>
+  `);
+}
+function downloadReportCSV(){
+  const d = window._reportData;
+  if(!d) return;
+  let csv = 'Baqala Trader Report\n';
+  csv += `Period,${d.from} to ${d.to}\n\n`;
+  csv += `Orders,${d.orderCount}\nRevenue,${d.revenue.toFixed(2)}\nCost,${d.cost.toFixed(2)}\nProfit,${d.profit.toFixed(2)}\nCollected,${d.collected.toFixed(2)}\n\n`;
+  csv += 'Order Date,Shop,Total Amount,Total Cost,Profit,Status\n';
+  d.rangeOrders.forEach(o=>{
+    const shopName = o.bt_shops?.name || '';
+    csv += `${o.order_date},${shopName},${Number(o.total_amount).toFixed(2)},${Number(o.total_cost).toFixed(2)},${(Number(o.total_amount)-Number(o.total_cost)).toFixed(2)},${o.status}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `baqala-report-${d.from}-to-${d.to}.csv`;
+  a.click();
+}
+function printReport(){
+  const d = window._reportData;
+  if(!d) return;
+  const shopRows = Object.entries(d.byShop).map(([name,x])=>`<tr><td>${name}</td><td class="c">${x.orders}</td><td class="c">SAR ${x.amount.toFixed(2)}</td></tr>`).join('');
+  const supRows = Object.entries(d.bySupplier).map(([name,amt])=>`<tr><td>${name}</td><td class="c">SAR ${amt.toFixed(2)}</td></tr>`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`
+    <html><head><title>Report ${d.from} to ${d.to}</title>
+    <style>
+      @page { size: A4; margin: 20mm; }
+      body{font-family:Arial,sans-serif;color:#1a1a1a;}
+      h1{font-size:20px;margin:0 0 4px;}
+      p.sub{color:#555;font-size:13px;margin:0 0 20px;}
+      h2{font-size:14px;margin:22px 0 8px;}
+      table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+      th,td{padding:7px 8px;border:1px solid #999;font-size:12.5px;text-align:left;}
+      th{background:#f2f2f0;}
+      td.c,th.c{text-align:center;}
+      .stats{display:flex;gap:14px;margin-bottom:14px;}
+      .stats div{border:1px solid #999;border-radius:6px;padding:10px 14px;}
+      .stats .lbl{font-size:11px;color:#666;}
+      .stats .val{font-size:16px;font-weight:bold;}
+    </style></head>
+    <body>
+      <h1>Baqala Trader — Report</h1>
+      <p class="sub">${d.from} to ${d.to}</p>
+      <div class="stats">
+        <div><div class="lbl">Orders</div><div class="val">${d.orderCount}</div></div>
+        <div><div class="lbl">Revenue</div><div class="val">SAR ${d.revenue.toFixed(2)}</div></div>
+        <div><div class="lbl">Profit</div><div class="val">SAR ${d.profit.toFixed(2)}</div></div>
+        <div><div class="lbl">Collected</div><div class="val">SAR ${d.collected.toFixed(2)}</div></div>
+      </div>
+      <h2>By shop</h2>
+      <table><tr><th>Shop</th><th class="c">Orders</th><th class="c">Amount</th></tr>${shopRows}</table>
+      <h2>By supplier</h2>
+      <table><tr><th>Supplier</th><th class="c">Amount spent</th></tr>${supRows}</table>
+      <script>window.print();<\/script>
+    </body></html>
+  `);
+  w.document.close();
 }
 
 /* ---- Print bill ---- */
