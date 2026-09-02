@@ -115,6 +115,11 @@
 
     <div id="new-order-panel">
       <label>Items needed</label>
+      <label>Items needed</label>
+      <button class="btn" id="voice-btn" style="width:100%;background:var(--marigold);color:#1a1a1a;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;">
+        🎤 Speak an item (اردو میں بولیں)
+      </button>
+      <p id="voice-status" style="font-size:12px;color:var(--ink-soft);text-align:center;margin:-4px 0 10px;display:none;"></p>
       <div id="item-rows"></div>
       <button class="add-item-btn" id="add-item-btn">+ Add item</button>
 
@@ -326,6 +331,140 @@ window.fillItemName = function(rid, sel){
   if(opt.value) row.querySelector('.i-name').value = opt.dataset.name;
 };
 document.getElementById('add-item-btn').addEventListener('click', addItemRow);
+
+/* ============ VOICE INPUT (Urdu → Arabic product matching) ============ */
+// Common Urdu words shopkeepers might say, mapped to the Arabic product names in the catalog.
+// Matching is substring-based and checks the longest keys first for accuracy.
+const URDU_TO_ARABIC = {
+  'دودھ':'حليب', 'دوده':'حليب', 'ملک':'حليب',
+  'کولڈ ڈرنک':'مشروبات غازية', 'بوتل':'مشروبات غازية', 'سافٹ ڈرنک':'مشروبات غازية',
+  'جوس':'عصير',
+  'پانی':'ماء',
+  'چاول':'أرز',
+  'تیل':'زيت',
+  'چینی':'سكر',
+  'چائے':'شاي', 'چاۓ':'شاي',
+  'کافی':'قهوة',
+  'آٹا':'طحين', 'آتا':'طحين',
+  'نمک':'ملح',
+  'دال':'عدس', 'مسور':'عدس',
+  'مکرونی':'مكرونة', 'نوڈلز':'مكرونة',
+  'روٹی':'خبز', 'نان':'خبز', 'بریڈ':'خبز',
+  'انڈے':'بيض', 'انڈا':'بيض',
+  'پنیر':'جبن', 'چیز':'جبن',
+  'مکھن':'زبدة', 'بٹر':'زبدة',
+  'دہی':'لبن', 'دهی':'لبن',
+  'صابن':'صابون', 'صابون':'صابون',
+  'شیمپو':'شامبو',
+  'ٹوتھ پیسٹ':'معجون أسنان', 'منجن':'معجون أسنان',
+  'ڈٹرجنٹ':'منظف', 'صفائی':'منظف',
+  'ٹشو':'مناديل',
+  'کھجور':'تمر',
+  'بسکٹ':'بسكويت',
+  'چاکلیٹ':'شوكولاتة', 'چاکلیت':'شوكولاتة'
+};
+const URDU_NUMBER_WORDS = {
+  'ایک':1,'دو':2,'تین':3,'چار':4,'پانچ':5,'چھ':6,'چھے':6,'سات':7,'آٹھ':8,'نو':9,'دس':10,
+  'گیارہ':11,'بارہ':12,'تیرہ':13,'چودہ':14,'پندرہ':15,'بیس':20,'پچیس':25,'تیس':30
+};
+function toWesternDigits(str){
+  const map = {'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9'};
+  return str.replace(/[۰-۹]/g, ch => map[ch] || ch);
+}
+function parseVoiceTranscript(transcript){
+  let text = toWesternDigits(transcript.trim());
+  let qty = null;
+
+  // try digit match first
+  const digitMatch = text.match(/\d+(\.\d+)?/);
+  if(digitMatch){
+    qty = parseFloat(digitMatch[0]);
+    text = text.replace(digitMatch[0], '').trim();
+  } else {
+    // try Urdu number words
+    for(const word in URDU_NUMBER_WORDS){
+      if(text.includes(word)){
+        qty = URDU_NUMBER_WORDS[word];
+        text = text.replace(word, '').trim();
+        break;
+      }
+    }
+  }
+  if(!qty) qty = 1;
+
+  // strip common filler words (adad = piece/count, dedo/de do = give, chahiye = need)
+  text = text.replace(/\b(عدد|ادد|adad|دیدو|دے دو|چاہیے|چاہئے|چاہیۓ)\b/g, '').trim();
+
+  // match against Urdu→Arabic dictionary (longest key first for accuracy)
+  const keys = Object.keys(URDU_TO_ARABIC).sort((a,b)=> b.length - a.length);
+  let matchedArabic = null;
+  for(const key of keys){
+    if(text.includes(key)){ matchedArabic = URDU_TO_ARABIC[key]; break; }
+  }
+
+  return { qty, rawText: text, matchedArabic };
+}
+
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+const voiceBtn = document.getElementById('voice-btn');
+const voiceStatus = document.getElementById('voice-status');
+
+if(!SpeechRecognitionAPI){
+  voiceBtn.style.display = 'none';
+} else {
+  const recognition = new SpeechRecognitionAPI();
+  recognition.lang = 'ur-PK';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  let listening = false;
+
+  voiceBtn.addEventListener('click', ()=>{
+    if(listening) return;
+    listening = true;
+    voiceBtn.textContent = '🎙️ Listening... speak now';
+    voiceStatus.style.display = 'none';
+    try{ recognition.start(); }catch(e){}
+  });
+
+  recognition.addEventListener('result', (event)=>{
+    const transcript = event.results[0][0].transcript;
+    const {qty, rawText, matchedArabic} = parseVoiceTranscript(transcript);
+
+    addItemRow();
+    const rows = document.querySelectorAll('#item-rows .item-row');
+    const lastRow = rows[rows.length-1];
+
+    if(matchedArabic){
+      const product = products.find(p=>p.name===matchedArabic);
+      if(product){
+        const sel = lastRow.querySelector('select');
+        sel.value = product.id;
+        lastRow.querySelector('.i-name').value = product.name;
+      } else {
+        lastRow.querySelector('.i-name').value = matchedArabic;
+      }
+      lastRow.querySelector('.i-qty').value = qty;
+      voiceStatus.textContent = `✅ Heard "${transcript}" — added ${matchedArabic} × ${qty}`;
+    } else {
+      lastRow.querySelector('.i-name').value = rawText || transcript;
+      lastRow.querySelector('.i-qty').value = qty;
+      voiceStatus.textContent = `⚠️ Heard "${transcript}" — couldn't match a known item, please check the row`;
+    }
+    voiceStatus.style.display = 'block';
+  });
+
+  recognition.addEventListener('error', (event)=>{
+    voiceStatus.textContent = event.error==='not-allowed'
+      ? 'Microphone permission needed — please allow access and try again.'
+      : 'Could not hear you clearly, please try again.';
+    voiceStatus.style.display = 'block';
+  });
+
+  recognition.addEventListener('end', ()=>{
+    listening = false;
+    voiceBtn.textContent = '🎤 Speak an item (اردو میں بولیں)';
+  });
+}
 
 document.getElementById('submit-order').addEventListener('click', async ()=>{
   const rows = document.querySelectorAll('#item-rows .item-row');
