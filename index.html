@@ -917,12 +917,18 @@ function renderProducts(){
 function openProductForm(existing){
   const p = existing || {};
   const supplierOptions = '<option value="">Not set</option>' + SUPPLIERS.map(s=>`<option value="${s.id}" ${p.supplier_id===s.id?'selected':''}>${s.name}</option>`).join('');
+  const commonUnits = ['كيس','علبة','زجاجة','قطعة','كرتون','كيلو','لتر','طبق','أنبوب','كوب','صندوق','ربطة','حبة'];
+  const currentUnit = p.unit || '';
+  const isOther = currentUnit && !commonUnits.includes(currentUnit);
+  const unitOptions = commonUnits.map(u=>`<option value="${u}" ${currentUnit===u?'selected':''}>${u}</option>`).join('')
+    + `<option value="__other__" ${isOther?'selected':''}>أخرى (Other — type below)</option>`;
   openSheet(`
     <div class="sheet-head"><h3>${existing?'Edit product':'Add product'}</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <label>Product name</label>
     <input type="text" id="f-prod-name" value="${p.name||''}" placeholder="e.g. Rice 5kg">
     <label>Unit</label>
-    <input type="text" id="f-prod-unit" value="${p.unit||'pcs'}" placeholder="pcs, kg, box...">
+    <select id="f-prod-unit-select" onchange="document.getElementById('f-prod-unit-other').style.display = this.value==='__other__' ? 'block' : 'none';">${unitOptions}</select>
+    <input type="text" id="f-prod-unit-other" value="${isOther?currentUnit:''}" placeholder="Type custom unit" style="margin-top:8px;display:${isOther?'block':'none'};">
     <div class="grid3" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div><label>Cost price (SAR)</label><input type="number" id="f-prod-cost" value="${p.cost_price||0}" step="0.01"></div>
       <div><label>Sell price (SAR)</label><input type="number" id="f-prod-price" value="${p.sell_price||0}" step="0.01"></div>
@@ -935,9 +941,11 @@ function openProductForm(existing){
 async function saveProduct(id){
   const name = document.getElementById('f-prod-name').value.trim();
   if(!name){ toast('Product name is required', true); return; }
+  const unitSel = document.getElementById('f-prod-unit-select').value;
+  const unit = unitSel === '__other__' ? (document.getElementById('f-prod-unit-other').value.trim() || 'pcs') : unitSel;
   const payload = {
     name,
-    unit: document.getElementById('f-prod-unit').value.trim() || 'pcs',
+    unit,
     cost_price: parseFloat(document.getElementById('f-prod-cost').value)||0,
     sell_price: parseFloat(document.getElementById('f-prod-price').value)||0,
     supplier_id: document.getElementById('f-prod-supplier').value || null
@@ -1046,23 +1054,31 @@ function renderPurchaseList(){
   }).join('');
 }
 function printPurchaseList(supName, rows){
-  const rowsHtml = rows.map(r=>`<tr><td>${r.name}</td><td class="c">${r.qty} ${r.unit||''}</td></tr>`).join('');
+  const rowsHtml = rows.map((r,idx)=>`<tr><td class="c">${idx+1}</td><td>${r.name}</td><td class="c">${r.qty} ${r.unit||''}</td></tr>`).join('');
   const w = window.open('', '_blank');
   w.document.write(`
-    <html><head><title>Purchase list — ${supName}</title>
+    <html><head><title>Purchase order — ${supName}</title>
     <style>
-      body{font-family:Arial,sans-serif;padding:20px;color:#1a1a1a;}
-      h1{font-size:17px;margin:0 0 2px;}
-      p.sub{color:#666;font-size:12px;margin:0 0 16px;}
+      @page { size: A4; margin: 20mm; }
+      body{font-family:Arial,sans-serif;color:#1a1a1a;display:flex;justify-content:center;}
+      .wrap{width:80%;max-width:420px;padding-top:20mm;}
+      h1{font-size:20px;margin:0 0 4px;text-align:center;}
+      p.sub{color:#555;font-size:13px;margin:0 0 22px;text-align:center;}
       table{width:100%;border-collapse:collapse;}
-      th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #ddd;font-size:14px;}
-      th{color:#666;}
-      td.c,th.c{text-align:right;}
+      th,td{padding:8px 10px;border:1px solid #999;font-size:13px;}
+      th{background:#f2f2f0;text-align:center;}
+      td.c,th.c{text-align:center;}
+      td:nth-child(2){text-align:left;}
     </style></head>
     <body>
-      <h1>Purchase list</h1>
-      <p class="sub">To buy from: ${supName} · ${new Date().toLocaleDateString('en-GB')}</p>
-      <table><tr><th>Item</th><th class="c">Quantity</th></tr>${rowsHtml}</table>
+      <div class="wrap">
+        <h1>Purchase order</h1>
+        <p class="sub">${supName} &nbsp;·&nbsp; ${new Date().toLocaleDateString('en-GB')}</p>
+        <table>
+          <tr><th style="width:14%;">#</th><th>Item</th><th style="width:28%;">Quantity</th></tr>
+          ${rowsHtml}
+        </table>
+      </div>
       <script>window.print();<\/script>
     </body></html>
   `);
