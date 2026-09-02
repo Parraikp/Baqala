@@ -265,8 +265,10 @@
     <section class="view" id="view-orders">
       <div class="section-title">
         <h2>All orders</h2>
-        <a onclick="goto('purchase')">🛒 Purchase list</a>
       </div>
+      <button class="btn" style="width:100%;background:var(--marigold);color:#1a1a1a;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;" onclick="goto('purchase')">
+        🛒 Purchase list
+      </button>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
         <input type="date" id="orders-date-filter" style="flex:1;" onchange="renderOrders()">
         <button class="btn btn-outline" style="padding:11px 14px;white-space:nowrap;" onclick="document.getElementById('orders-date-filter').value=''; renderOrders();">All dates</button>
@@ -451,9 +453,12 @@ function renderHome(){
   if(pending.length){
     pendBlock.innerHTML = `
       <div class="setup-banner" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="goto('orders')">
-        <span><strong>${pending.length} new request${pending.length!==1?'s':''}</strong> waiting to be priced</span>
+        <span>📝 <strong>${pending.length}</strong> order${pending.length!==1?'s':''} need${pending.length===1?'s':''} a price before sending</span>
         <span style="color:var(--green);font-weight:600;">Review →</span>
-      </div>`;
+      </div>
+      <button class="btn" style="width:100%;background:var(--card);border:1.5px solid var(--marigold);color:var(--marigold-dark, #8a6417);font-weight:700;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="goto('purchase')">
+        🛒 View purchase list
+      </button>`;
   } else { pendBlock.innerHTML = ''; }
 
   const wrap = document.getElementById('home-recent-orders');
