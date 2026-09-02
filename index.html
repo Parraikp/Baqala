@@ -754,31 +754,91 @@ async function saveOrderPricing(orderId){
 /* ---- Print bill ---- */
 function printBill(orderId){
   const o = ORDERS.find(x=>x.id===orderId) || null;
-  // fall back to a fresh fetch of the order if not yet in local state (just-saved order)
   const render = (order)=>{
     const shopName = order.bt_shops?.name || SHOPS.find(s=>s.id===order.shop_id)?.name || 'Shop';
     const items = order.bt_order_items || [];
-    const rows = items.map(i=>`<tr><td>${i.product_name}</td><td>${i.quantity}</td><td>${fmt(i.unit_price)}</td><td>${fmt(i.line_total)}</td></tr>`).join('');
+    const ref = order.id.slice(0,8).toUpperCase();
+    const dateStr = new Date(order.order_date).toLocaleDateString('en-GB');
+    const rows = items.map(i=>`
+      <tr>
+        <td class="desc">${i.product_name}</td>
+        <td class="c">${i.quantity}</td>
+        <td class="c">${Number(i.unit_price).toFixed(2)}</td>
+        <td class="c">${Number(i.line_total).toFixed(2)}</td>
+      </tr>`).join('');
+    const blankRows = Array.from({length: Math.max(0, 9 - items.length)}).map(()=>`
+      <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
+
     const w = window.open('', '_blank');
     w.document.write(`
       <html><head><title>Bill — ${shopName}</title>
       <style>
-        body{font-family:Arial,sans-serif;padding:24px;color:#22281F;}
-        h1{font-size:18px;margin:0 0 2px;}
-        p.sub{color:#666;font-size:12px;margin:0 0 20px;}
-        table{width:100%;border-collapse:collapse;margin-top:10px;}
-        th,td{text-align:left;padding:7px 6px;border-bottom:1px solid #ddd;font-size:13px;}
-        th{color:#666;font-weight:600;}
-        .total-row td{font-weight:700;border-top:2px solid #22281F;border-bottom:none;padding-top:10px;}
+        @page { size: 20cm 15cm; margin: 8mm; }
+        *{box-sizing:border-box;}
+        body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:0;font-size:12px;}
+        .sheet{width:100%;height:100%;padding:4mm;}
+        .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a1a1a;padding-bottom:8px;margin-bottom:10px;}
+        .head .en{text-align:left;}
+        .head .ar{text-align:right;direction:rtl;}
+        .head .brand{font-size:20px;font-weight:bold;margin:0;letter-spacing:0.5px;}
+        .head .brand-ar{font-size:20px;font-weight:bold;margin:0;}
+        .head .sub{font-size:11px;color:#555;margin:2px 0 0;}
+        .head .ref{font-size:12px;color:#b3452e;font-weight:bold;margin-top:4px;}
+        .meta{display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;padding:0 2px;}
+        .meta .ar{direction:rtl;}
+        table{width:100%;border-collapse:collapse;border:1.5px solid #1a1a1a;}
+        th,td{border:1px solid #1a1a1a;padding:6px 8px;font-size:12px;}
+        th{background:#f0f0ee;text-align:center;font-weight:bold;}
+        th .en{display:block;font-size:11px;}
+        th .ar{display:block;font-size:11px;direction:rtl;color:#333;}
+        td.desc{text-align:left;}
+        td.c{text-align:center;}
+        .total-row td{font-weight:bold;background:#f7f5f0;}
+        .total-row td.desc{text-align:right;direction:rtl;}
+        .foot{display:flex;justify-content:space-between;margin-top:22px;font-size:12px;}
+        .foot .line{border-top:1px solid #1a1a1a;width:150px;text-align:center;padding-top:4px;}
+        @media print{ .noprint{display:none;} }
       </style></head>
       <body>
-        <h1>Baqala Trader — Bill</h1>
-        <p class="sub">${shopName} · ${new Date(order.order_date).toDateString()}</p>
-        <table>
-          <tr><th>Item</th><th>Qty</th><th>Price</th><th>Amount</th></tr>
-          ${rows}
-          <tr class="total-row"><td colspan="3">Total</td><td>SAR ${Number(order.total_amount).toLocaleString()}</td></tr>
-        </table>
+        <div class="sheet">
+          <div class="head">
+            <div class="en">
+              <p class="brand">Baqala Trader</p>
+              <p class="sub">Supplies for foodstuffs</p>
+              <p class="ref">Ref: ${ref} &nbsp;|&nbsp; ${dateStr}</p>
+            </div>
+            <div class="ar">
+              <p class="brand-ar">تاجر البقالة</p>
+              <p class="sub">توريد المواد الغذائية</p>
+            </div>
+          </div>
+          <div class="meta">
+            <div>Customer: <strong>${shopName}</strong></div>
+            <div class="ar">العميل: <strong>${shopName}</strong></div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:42%;"><span class="en">Description</span><span class="ar">البيان</span></th>
+                <th style="width:16%;"><span class="en">Qty</span><span class="ar">العدد</span></th>
+                <th style="width:21%;"><span class="en">Unit Price</span><span class="ar">السعر الإفرادي</span></th>
+                <th style="width:21%;"><span class="en">Total Price</span><span class="ar">السعر الإجمالي</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+              ${blankRows}
+              <tr class="total-row">
+                <td class="desc" colspan="3">Total / الإجمالي</td>
+                <td class="c">SAR ${Number(order.total_amount).toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="foot">
+            <div class="line">Signature / التوقيع</div>
+            <div class="line">Date / التاريخ</div>
+          </div>
+        </div>
         <script>window.print();<\/script>
       </body></html>
     `);
