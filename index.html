@@ -213,6 +213,16 @@
   .chip-name{font-size:12.5px;font-weight:600;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .chip-meta{font-size:10.5px;color:var(--ink-soft);margin:1px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
+  .acc-columns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .acc-col-title{font-size:12.5px;font-weight:700;color:var(--ink-soft);margin:0 0 8px;}
+  .acc-card{background:var(--card);border:1.5px solid var(--line);border-top:3px solid var(--green);border-radius:12px;
+    padding:11px;margin-bottom:8px;cursor:pointer;box-shadow:0 1px 4px rgba(34,40,31,.04);}
+  .acc-card .icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:700;margin-bottom:6px;}
+  .acc-card .name{font-size:12.5px;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .acc-card .meta{font-size:10.5px;color:var(--ink-soft);margin:2px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .acc-card .amt{font-size:14px;font-weight:700;margin:0;}
+
   .spinner{width:22px;height:22px;border:2.5px solid var(--line);border-top-color:var(--green);
     border-radius:50%;animation:spin .7s linear infinite;margin:30px auto;}
   @keyframes spin{to{transform:rotate(360deg);}}
@@ -299,11 +309,17 @@
         <h2>Generate report</h2>
         <a onclick="openReportForm()">+ New report</a>
       </div>
-      <div class="section-title" style="margin-top:20px;"><h2>Shop accounts</h2></div>
-      <div class="list" id="acc-shops-list"><div class="spinner"></div></div>
-
-      <div class="section-title" style="margin-top:20px;"><h2>Supplier accounts</h2></div>
-      <div class="list" id="acc-suppliers-list"><div class="spinner"></div></div>
+      <div class="section-title" style="margin-top:20px;"><h2>Accounts</h2></div>
+      <div class="acc-columns">
+        <div class="acc-col">
+          <p class="acc-col-title">🏪 Shops</p>
+          <div id="acc-shops-list"><div class="spinner"></div></div>
+        </div>
+        <div class="acc-col">
+          <p class="acc-col-title">🚚 Suppliers</p>
+          <div id="acc-suppliers-list"><div class="spinner"></div></div>
+        </div>
+      </div>
     </section>
 
     <!-- REPORTS (Suppliers & Products) -->
@@ -904,13 +920,15 @@ function renderAccounts(){
       const balA = BALANCES.find(x=>x.shop_id===a.id)?.balance_due || 0;
       const balB = BALANCES.find(x=>x.shop_id===b.id)?.balance_due || 0;
       return balB - balA;
-    }).map(s=>{
+    }).map((s,idx)=>{
       const bal = BALANCES.find(b=>b.shop_id===s.id);
       const due = bal ? Number(bal.balance_due) : 0;
-      return `<div class="row-card" onclick="viewShopLedger('${s.id}')">
-        <div class="icon">${initials(s.name)}</div>
-        <div class="body"><p class="title">${s.name}</p><p class="meta">Total ordered ${fmt(bal?bal.total_ordered:0)}</p></div>
-        <div class="right"><p class="amount" style="${due>0?'color:var(--red)':'color:var(--green)'}">${fmt(due)}</p></div>
+      const color = PURCHASE_COLORS[idx % PURCHASE_COLORS.length];
+      return `<div class="acc-card" style="border-top-color:${color};" onclick="viewShopLedger('${s.id}')">
+        <div class="icon" style="background:${color}22;color:${color};">${initials(s.name)}</div>
+        <p class="name">${s.name}</p>
+        <p class="meta">Ordered ${fmt(bal?bal.total_ordered:0)}</p>
+        <p class="amt" style="${due>0?'color:var(--red)':'color:var(--green)'}">${fmt(due)}</p>
       </div>`;
     }).join('');
   }
@@ -921,12 +939,14 @@ function renderAccounts(){
     supWrap.innerHTML = emptyState('🚚','No suppliers yet','');
   } else {
     const spendBySupplier = computeAllSupplierSpend();
-    supWrap.innerHTML = [...SUPPLIERS].sort((a,b)=> (spendBySupplier[b.id]||0) - (spendBySupplier[a.id]||0)).map(s=>{
+    supWrap.innerHTML = [...SUPPLIERS].sort((a,b)=> (spendBySupplier[b.id]||0) - (spendBySupplier[a.id]||0)).map((s,idx)=>{
       const spend = spendBySupplier[s.id] || 0;
-      return `<div class="row-card" onclick="viewSupplierLedger('${s.id}')">
-        <div class="icon" style="background:var(--marigold-soft);color:#8a6417;">${initials(s.name)}</div>
-        <div class="body"><p class="title">${s.name}</p><p class="meta">${s.contact_number||'No contact'}</p></div>
-        <div class="right"><p class="amount">${fmt(spend)}</p></div>
+      const color = PURCHASE_COLORS[idx % PURCHASE_COLORS.length];
+      return `<div class="acc-card" style="border-top-color:${color};" onclick="viewSupplierLedger('${s.id}')">
+        <div class="icon" style="background:${color}22;color:${color};">${initials(s.name)}</div>
+        <p class="name">${s.name}</p>
+        <p class="meta">${s.contact_number||'No contact'}</p>
+        <p class="amt">${fmt(spend)}</p>
       </div>`;
     }).join('');
   }
@@ -1152,42 +1172,43 @@ function printBill(orderId, mode){
         <td class="c">${Number(i.unit_price).toFixed(2)}</td>
         <td class="c">${Number(i.line_total).toFixed(2)}</td>
       </tr>`).join('');
-    const blankRows = Array.from({length: Math.max(0, 15 - items.length)}).map(()=>`
+    const blankRows = Array.from({length: Math.max(0, 10 - items.length)}).map(()=>`
       <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
 
     const w = window.open('', '_blank');
     w.document.write(`
       <html><head><title>Bill — ${shopName}</title>
       <style>
-        @page { size: 15cm 20cm; margin: 8mm; }
+        @page { size: 15cm 20cm; margin: 6mm; }
         *{box-sizing:border-box;}
-        body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:0;font-size:12px;}
-        .sheet{width:100%;height:100%;padding:4mm;}
-        .head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px;}
+        html,body{height:100%;}
+        body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:0;font-size:11.5px;}
+        .sheet{width:100%;padding:2mm;}
+        .head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;}
         .head .en{text-align:left;flex:1;}
         .head .ar{text-align:right;direction:rtl;flex:1;}
-        .head .brand{font-size:20px;font-weight:bold;margin:0;letter-spacing:0.5px;color:#1a3b8f;}
-        .head .brand-ar{font-size:24px;font-weight:bold;margin:0;color:#1a3b8f;}
-        .head .sub{font-size:12px;color:#1a3b8f;margin:2px 0 0;font-weight:bold;}
-        .head .ref{font-size:12px;color:#8B0000;font-weight:bold;margin-top:4px;}
+        .head .brand{font-size:18px;font-weight:bold;margin:0;letter-spacing:0.5px;color:#1a3b8f;}
+        .head .brand-ar{font-size:21px;font-weight:bold;margin:0;color:#1a3b8f;}
+        .head .sub{font-size:11px;color:#1a3b8f;margin:2px 0 0;font-weight:bold;}
+        .head .ref{font-size:11px;color:#8B0000;font-weight:bold;margin-top:3px;}
         .head .center{text-align:center;flex:1;}
-        .head .cart{font-size:42px;line-height:1;}
-        .head .fatura-ar{font-size:19px;font-weight:bold;color:#1a3b8f;margin:4px 0 0;direction:rtl;}
-        .head .fatura-en{font-size:15px;font-weight:bold;color:#1a3b8f;margin:2px 0 0;letter-spacing:1.5px;}
-        .meta{display:flex;justify-content:space-between;font-size:12px;margin-bottom:18px;padding:0 2px;}
+        .head .cart{font-size:34px;line-height:1;}
+        .head .fatura-ar{font-size:16px;font-weight:bold;color:#1a3b8f;margin:3px 0 0;direction:rtl;}
+        .head .fatura-en{font-size:13px;font-weight:bold;color:#1a3b8f;margin:1px 0 0;letter-spacing:1.5px;}
+        .meta{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:10px;padding:0 2px;}
         .meta .ar{direction:rtl;}
-        .table-wrap{border:3px double #1a3b8f;border-radius:14px;overflow:hidden;margin-top:6px;}
+        .table-wrap{border:3px double #1a3b8f;border-radius:12px;overflow:hidden;margin-top:4px;}
         table{width:100%;border-collapse:collapse;}
-        th,td{border:1px solid #3a5199;padding:7px 8px;font-size:12px;}
+        th,td{border:1px solid #3a5199;padding:5px 7px;font-size:11.5px;}
         th{background:#f0f0ee;text-align:center;font-weight:bold;}
-        th .en{display:block;font-size:11px;}
-        th .ar{display:block;font-size:11px;direction:rtl;color:#333;}
+        th .en{display:block;font-size:10.5px;}
+        th .ar{display:block;font-size:10.5px;direction:rtl;color:#333;}
         td.desc{text-align:left;}
         td.c{text-align:center;}
         .total-row td{font-weight:bold;background:#f7f5f0;}
         .total-row td.desc{text-align:right;direction:rtl;}
-        .foot{display:flex;justify-content:space-between;margin-top:22px;font-size:12px;}
-        .foot .line{border-top:1px solid #000;width:150px;text-align:center;padding-top:4px;}
+        .foot{display:flex;justify-content:space-between;margin-top:12px;font-size:11.5px;}
+        .foot .line{border-top:1px solid #000;width:140px;text-align:center;padding-top:4px;}
         @media print{ .noprint{display:none;} }
       </style></head>
       <body>
