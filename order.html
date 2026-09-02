@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Send order — Baqala Trader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --green:#1F4D3A; --green-dark:#153529; --marigold:#E2A33D;
+    --bg:#F6F7F3; --card:#FFFFFF; --ink:#22281F; --ink-soft:#5C6459;
+    --line:#E4E7DF; --red:#B3452E; --green-soft:#EAF3EC; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,.num{font-family:'Space Grotesk',sans-serif;}
+  .wrap{max-width:440px;margin:0 auto;min-height:100vh;padding:24px 18px 40px;}
+  .brand{display:flex;align-items:center;gap:9px;margin-bottom:22px;}
+  .brand .mark{width:34px;height:34px;border-radius:9px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-family:'Space Grotesk';}
+  .brand h1{font-size:17px;margin:0;}
+  .brand p{font-size:12px;color:var(--ink-soft);margin:0;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;}
+  label{font-size:12.5px;font-weight:600;color:var(--ink-soft);display:block;margin:0 0 6px;}
+  input[type=text],input[type=number],select{
+    width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:10px;
+    font-size:15px;font-family:'Inter';background:var(--card);color:var(--ink);
+  }
+  input:focus,select:focus{outline:2px solid var(--green);outline-offset:-1px;}
+  .btn{border:none;border-radius:11px;padding:13px 16px;font-size:15px;font-weight:600;cursor:pointer;width:100%;font-family:'Inter';}
+  .btn-primary{background:var(--green);color:#fff;}
+  .btn-primary:disabled{background:#B9C2B4;}
+  .btn-outline{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .err{color:var(--red);font-size:13px;margin-top:8px;display:none;}
+  .hide{display:none !important;}
+
+  .shop-banner{display:flex;align-items:center;gap:10px;background:var(--green-soft);border-radius:12px;padding:12px 14px;margin-bottom:18px;}
+  .shop-banner .icon{width:38px;height:38px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-family:'Space Grotesk';}
+  .shop-banner .name{font-weight:600;font-size:15px;margin:0;}
+  .shop-banner .sub{font-size:12px;color:var(--ink-soft);margin:0;}
+
+  .item-row{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;display:flex;flex-direction:column;gap:8px;}
+  .item-row .top{display:flex;gap:8px;align-items:center;}
+  .item-row select,.item-row input{flex:1;}
+  .item-row .qty{max-width:90px;flex:0 0 90px;}
+  .item-row .rm{background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;padding:4px;flex-shrink:0;}
+  .add-item-btn{width:100%;margin-top:10px;border:1.5px dashed var(--line);background:none;border-radius:10px;padding:11px;color:var(--green);font-weight:600;font-size:13.5px;cursor:pointer;}
+
+  .success{text-align:center;padding:40px 10px;}
+  .success .big{font-size:44px;display:block;margin-bottom:10px;}
+  .success h2{margin:0 0 6px;}
+  .success p{color:var(--ink-soft);font-size:14px;margin:0 0 24px;}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+    padding:10px 18px;border-radius:30px;font-size:13px;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s;}
+  .toast.show{opacity:1;}
+  .toast.err{background:var(--red);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <div class="mark">B</div>
+    <div><h1>Baqala Trader</h1><p>Send your order</p></div>
+  </div>
+
+  <!-- STEP 1: PIN entry -->
+  <div class="card" id="pin-step">
+    <label>Enter your shop PIN</label>
+    <input type="text" id="pin-input" placeholder="e.g. 1234" inputmode="numeric">
+    <p class="err" id="pin-err">PIN not recognized. Please check and try again.</p>
+    <div style="margin-top:14px;"><button class="btn btn-primary" id="pin-continue">Continue</button></div>
+  </div>
+
+  <!-- STEP 2: Order form -->
+  <div id="order-step" class="hide">
+    <div class="shop-banner">
+      <div class="icon" id="shop-initials"></div>
+      <div><p class="name" id="shop-name"></p><p class="sub">Add the items you need below</p></div>
+    </div>
+
+    <label>Items needed</label>
+    <div id="item-rows"></div>
+    <button class="add-item-btn" id="add-item-btn">+ Add item</button>
+
+    <div style="margin-top:20px;">
+      <button class="btn btn-primary" id="submit-order">Send order</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Success -->
+  <div id="success-step" class="hide">
+    <div class="success">
+      <span class="big">✅</span>
+      <h2>Order sent</h2>
+      <p>We'll prepare your bill and bring the items shortly.</p>
+      <button class="btn btn-outline" id="send-another">Send another order</button>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://zpomibqrmtjyscirzdvw.supabase.co";
+const SUPABASE_KEY = "sb_publishable_nLudfpPOjErmQH5p8eTsxQ_fGTCFv3N";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentShop = null;
+let products = [];
+
+function toast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr?' err':'');
+  setTimeout(()=> t.className='toast', 2200);
+}
+function initials(name){ return (name||'?').trim().split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+
+document.getElementById('pin-continue').addEventListener('click', async ()=>{
+  const pin = document.getElementById('pin-input').value.trim();
+  const errEl = document.getElementById('pin-err');
+  errEl.style.display = 'none';
+  if(!pin){ errEl.textContent='Please enter your PIN.'; errEl.style.display='block'; return; }
+
+  const {data, error} = await sb.from('bt_shops').select('*').eq('pin', pin).maybeSingle();
+  if(error || !data){
+    errEl.textContent = 'PIN not recognized. Please check and try again.';
+    errEl.style.display = 'block';
+    return;
+  }
+  currentShop = data;
+  document.getElementById('shop-initials').textContent = initials(data.name);
+  document.getElementById('shop-name').textContent = data.name;
+  document.getElementById('pin-step').classList.add('hide');
+  document.getElementById('order-step').classList.remove('hide');
+
+  const {data: prodData} = await sb.from('bt_products').select('*').order('name');
+  products = prodData || [];
+  addItemRow();
+});
+
+let rowCount = 0;
+function addItemRow(){
+  rowCount++;
+  const rid = 'row-'+rowCount;
+  const productOptions = '<option value="">Type item name...</option>' + products.map(p=>`<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  div.id = rid;
+  div.innerHTML = `
+    <div class="top">
+      <select onchange="window.fillItemName('${rid}', this)">${productOptions}</select>
+      <button class="rm" onclick="document.getElementById('${rid}').remove()">Remove</button>
+    </div>
+    <div class="top">
+      <input type="text" class="i-name" placeholder="Item name">
+      <input type="number" class="i-qty" placeholder="Qty" min="0" step="0.5">
+    </div>
+  `;
+  document.getElementById('item-rows').appendChild(div);
+}
+window.fillItemName = function(rid, sel){
+  const opt = sel.selectedOptions[0];
+  const row = document.getElementById(rid);
+  if(opt.value) row.querySelector('.i-name').value = opt.dataset.name;
+};
+document.getElementById('add-item-btn').addEventListener('click', addItemRow);
+
+document.getElementById('submit-order').addEventListener('click', async ()=>{
+  const rows = document.querySelectorAll('#item-rows .item-row');
+  const items = [];
+  rows.forEach(r=>{
+    const name = r.querySelector('.i-name').value.trim();
+    const qty = parseFloat(r.querySelector('.i-qty').value) || 0;
+    const sel = r.querySelector('select');
+    if(name && qty>0){
+      items.push({ name, qty, product_id: sel.value || null });
+    }
+  });
+  if(items.length===0){ toast('Add at least one item with a quantity', true); return; }
+
+  const btn = document.getElementById('submit-order');
+  btn.disabled = true; btn.textContent = 'Sending...';
+
+  const {data: orderData, error: orderErr} = await sb.from('bt_orders').insert({
+    shop_id: currentShop.id, order_date: new Date().toISOString().slice(0,10),
+    total_amount: 0, total_cost: 0, status: 'requested'
+  }).select().single();
+
+  if(orderErr){ toast(orderErr.message, true); btn.disabled=false; btn.textContent='Send order'; return; }
+
+  const itemsPayload = items.map(i=>({
+    order_id: orderData.id, product_id: i.product_id, product_name: i.name,
+    quantity: i.qty, unit_cost: 0, unit_price: 0
+  }));
+  const {error: itemsErr} = await sb.from('bt_order_items').insert(itemsPayload);
+  if(itemsErr){ toast(itemsErr.message, true); btn.disabled=false; btn.textContent='Send order'; return; }
+
+  document.getElementById('order-step').classList.add('hide');
+  document.getElementById('success-step').classList.remove('hide');
+});
+
+document.getElementById('send-another').addEventListener('click', ()=>{
+  document.getElementById('success-step').classList.add('hide');
+  document.getElementById('item-rows').innerHTML = '';
+  document.getElementById('pin-input').value = '';
+  document.getElementById('order-step').classList.add('hide');
+  document.getElementById('pin-step').classList.remove('hide');
+});
+</script>
+</body>
+</html>
