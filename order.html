@@ -58,6 +58,31 @@
     padding:10px 18px;border-radius:30px;font-size:13px;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s;}
   .toast.show{opacity:1;}
   .toast.err{background:var(--red);}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;}
+  .tabs button{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);
+    font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;font-family:'Inter';}
+  .tabs button.active{background:var(--green);color:#fff;border-color:var(--green);}
+
+  .order-card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--green);border-radius:12px;
+    padding:12px 14px;margin-bottom:10px;cursor:pointer;}
+  .order-card .top-row{display:flex;justify-content:space-between;align-items:center;}
+  .order-card .date{font-size:13px;font-weight:700;margin:0;}
+  .order-card .items-count{font-size:12px;color:var(--ink-soft);margin:2px 0 0;}
+  .order-card .amt{font-size:15px;font-weight:700;margin:0;}
+  .tag{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;}
+  .tag.requested{background:#E5EAF5;color:#3A5199;}
+  .tag.due{background:#F7E9E5;color:var(--red);}
+  .tag.partial{background:#FBF1DE;color:#8a6417;}
+  .tag.paid{background:var(--green-soft);color:var(--green);}
+
+  .detail-table{width:100%;border-collapse:collapse;margin-top:10px;border-radius:10px;overflow:hidden;
+    box-shadow:0 1px 4px rgba(34,40,31,.06);}
+  .detail-table th{background:var(--green);color:#fff;font-size:11.5px;padding:9px 8px;text-align:left;}
+  .detail-table th.c,.detail-table td.c{text-align:center;}
+  .detail-table td{padding:9px 8px;font-size:13px;border-bottom:1px solid var(--line);}
+  .detail-table tr:nth-child(even) td{background:var(--bg);}
+  .detail-table tr:last-child td{border-bottom:none;}
 </style>
 </head>
 <body>
@@ -80,15 +105,42 @@
   <div id="order-step" class="hide">
     <div class="shop-banner">
       <div class="icon" id="shop-initials"></div>
-      <div><p class="name" id="shop-name"></p><p class="sub">Add the items you need below</p></div>
+      <div><p class="name" id="shop-name"></p><p class="sub" id="shop-sub">Add the items you need below</p></div>
     </div>
 
-    <label>Items needed</label>
-    <div id="item-rows"></div>
-    <button class="add-item-btn" id="add-item-btn">+ Add item</button>
+    <div class="tabs">
+      <button class="active" id="tab-new">+ New order</button>
+      <button id="tab-history">📋 My orders</button>
+    </div>
 
-    <div style="margin-top:20px;">
-      <button class="btn btn-primary" id="submit-order">Send order</button>
+    <div id="new-order-panel">
+      <label>Items needed</label>
+      <div id="item-rows"></div>
+      <button class="add-item-btn" id="add-item-btn">+ Add item</button>
+
+      <div style="margin-top:20px;">
+        <button class="btn btn-primary" id="submit-order">Send order</button>
+      </div>
+    </div>
+
+    <div id="history-panel" class="hide">
+      <div id="orders-history-list"></div>
+    </div>
+  </div>
+
+  <!-- ORDER DETAIL -->
+  <div id="detail-step" class="hide">
+    <button class="btn btn-outline" id="detail-back" style="margin-bottom:16px;">← Back to orders</button>
+    <div class="card">
+      <div class="top-row" style="display:flex;justify-content:space-between;align-items:center;">
+        <p style="font-weight:700;margin:0;" id="detail-date"></p>
+        <span class="tag" id="detail-status"></span>
+      </div>
+      <table class="detail-table">
+        <thead><tr><th style="width:12%;">#</th><th>Item</th><th class="c">Qty</th></tr></thead>
+        <tbody id="detail-items"></tbody>
+      </table>
+      <p style="text-align:right;font-weight:700;margin-top:10px;" id="detail-total"></p>
     </div>
   </div>
 
@@ -112,6 +164,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentShop = null;
 let products = [];
+let shopOrders = [];
 
 function toast(msg, isErr){
   const t = document.getElementById('toast');
@@ -120,6 +173,7 @@ function toast(msg, isErr){
   setTimeout(()=> t.className='toast', 2200);
 }
 function initials(name){ return (name||'?').trim().split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+function fmt(n){ return 'SAR ' + (Number(n)||0).toLocaleString('en-US',{maximumFractionDigits:2}); }
 
 document.getElementById('pin-continue').addEventListener('click', async ()=>{
   const pin = document.getElementById('pin-input').value.trim();
@@ -142,6 +196,70 @@ document.getElementById('pin-continue').addEventListener('click', async ()=>{
   const {data: prodData} = await sb.from('bt_products').select('*').order('name');
   products = prodData || [];
   addItemRow();
+});
+
+/* ---- Tabs ---- */
+document.getElementById('tab-new').addEventListener('click', ()=>{
+  document.getElementById('tab-new').classList.add('active');
+  document.getElementById('tab-history').classList.remove('active');
+  document.getElementById('new-order-panel').classList.remove('hide');
+  document.getElementById('history-panel').classList.add('hide');
+});
+document.getElementById('tab-history').addEventListener('click', async ()=>{
+  document.getElementById('tab-history').classList.add('active');
+  document.getElementById('tab-new').classList.remove('active');
+  document.getElementById('history-panel').classList.remove('hide');
+  document.getElementById('new-order-panel').classList.add('hide');
+  await loadOrderHistory();
+});
+async function loadOrderHistory(){
+  const wrap = document.getElementById('orders-history-list');
+  wrap.innerHTML = '<p style="color:var(--ink-soft);font-size:13px;text-align:center;padding:20px 0;">Loading...</p>';
+  const {data, error} = await sb.from('bt_orders')
+    .select('*, bt_order_items(*)')
+    .eq('shop_id', currentShop.id)
+    .order('order_date', {ascending:false})
+    .order('created_at', {ascending:false});
+  if(error){ wrap.innerHTML = '<p class="err" style="display:block;">Could not load orders.</p>'; return; }
+  shopOrders = data || [];
+  if(shopOrders.length===0){
+    wrap.innerHTML = '<p style="color:var(--ink-soft);font-size:13px;text-align:center;padding:20px 0;">No past orders yet.</p>';
+    return;
+  }
+  wrap.innerHTML = shopOrders.map((o,idx)=>{
+    const itemCount = (o.bt_order_items||[]).length;
+    const dateStr = new Date(o.order_date).toDateString();
+    const amountLine = o.status==='requested' ? 'Waiting for price' : fmt(o.total_amount);
+    return `<div class="order-card" onclick="viewOrderDetail(${idx})">
+      <div class="top-row">
+        <div>
+          <p class="date">${dateStr}</p>
+          <p class="items-count">${itemCount} item${itemCount!==1?'s':''}</p>
+        </div>
+        <div style="text-align:right;">
+          <p class="amt">${amountLine}</p>
+          <span class="tag ${o.status}">${o.status}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.viewOrderDetail = function(idx){
+  const o = shopOrders[idx];
+  const items = o.bt_order_items || [];
+  document.getElementById('order-step').classList.add('hide');
+  document.getElementById('detail-step').classList.remove('hide');
+  document.getElementById('detail-date').textContent = new Date(o.order_date).toDateString();
+  document.getElementById('detail-status').textContent = o.status;
+  document.getElementById('detail-status').className = 'tag ' + o.status;
+  document.getElementById('detail-items').innerHTML = items.map((i,n)=>`
+    <tr><td class="c">${n+1}</td><td>${i.product_name}</td><td class="c">${i.quantity}</td></tr>
+  `).join('');
+  document.getElementById('detail-total').textContent = o.status==='requested' ? 'Waiting for price to be added' : 'Total: ' + fmt(o.total_amount);
+};
+document.getElementById('detail-back').addEventListener('click', ()=>{
+  document.getElementById('detail-step').classList.add('hide');
+  document.getElementById('order-step').classList.remove('hide');
 });
 
 let rowCount = 0;
@@ -211,6 +329,10 @@ document.getElementById('send-another').addEventListener('click', ()=>{
   document.getElementById('pin-input').value = '';
   document.getElementById('order-step').classList.add('hide');
   document.getElementById('pin-step').classList.remove('hide');
+  document.getElementById('tab-new').classList.add('active');
+  document.getElementById('tab-history').classList.remove('active');
+  document.getElementById('new-order-panel').classList.remove('hide');
+  document.getElementById('history-panel').classList.add('hide');
 });
 </script>
 </body>
