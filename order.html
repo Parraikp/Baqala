@@ -325,6 +325,7 @@ function viewPreparedBill(idx){
   const w = window.open('', '_blank');
   w.document.write(`
     <html><head><title>Bill — ${currentShop.name}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
     <style>
       @page { size: 21cm 15cm; margin: 6mm 6mm 2.54cm 6mm; }
       *{box-sizing:border-box;} html,body{height:100%;}
@@ -352,7 +353,8 @@ function viewPreparedBill(idx){
       .foot{display:flex;justify-content:space-between;margin-top:12px;font-size:11.5px;}
       .foot .line{border-top:1px solid #000;width:140px;text-align:center;padding-top:4px;}
       .noprint{text-align:center;margin-top:16px;}
-      .noprint button{background:#1F4D3A;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;}
+      .noprint button{background:#1F4D3A;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;margin:0 4px;}
+      .noprint button.pdf{background:#E2A33D;color:#1a1a1a;font-weight:700;}
     </style></head>
     <body>
       <div class="sheet">
@@ -380,8 +382,25 @@ function viewPreparedBill(idx){
         </table>
         </div>
         <div class="foot"><div class="line">Signature / التوقيع</div><div class="line">Date / التاريخ</div></div>
-        <div class="noprint"><button onclick="window.print()">Print this bill</button></div>
       </div>
+      <div class="noprint">
+        <button onclick="window.print()">Print this bill</button>
+        <button class="pdf" onclick="downloadPDF()">⬇️ Download PDF</button>
+      </div>
+      <script>
+        function downloadPDF(){
+          var btns = document.querySelector('.noprint');
+          btns.style.visibility = 'hidden';
+          html2pdf().set({
+            filename: 'Bill-${billNo}-${currentShop.name.replace(/[^a-zA-Z0-9]/g,'_')}.pdf',
+            margin: 0,
+            jsPDF: { unit: 'cm', format: [21, 15], orientation: 'landscape' },
+            html2canvas: { scale: 2 }
+          }).from(document.querySelector('.sheet')).save().then(function(){
+            btns.style.visibility = 'visible';
+          });
+        }
+      <\/script>
     </body></html>
   `);
   w.document.close();
