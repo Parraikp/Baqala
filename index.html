@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Baqala Trader</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F4D3A">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -253,6 +256,7 @@
         </div>
       </div>
 
+      <div id="install-banner"></div>
       <div id="pending-requests-block"></div>
 
       <div class="section-title">
@@ -1178,6 +1182,7 @@ function printBill(orderId, mode){
     const w = window.open('', '_blank');
     w.document.write(`
       <html><head><title>Bill — ${shopName}</title>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
       <style>
         @page { size: 21cm 15cm; margin: 6mm 6mm 2.54cm 6mm; }
         *{box-sizing:border-box;}
@@ -1257,8 +1262,25 @@ function printBill(orderId, mode){
             <div class="line">Signature / التوقيع</div>
             <div class="line">Date / التاريخ</div>
           </div>
-          ${mode==='view' ? `<div class="noprint" style="text-align:center;margin-top:18px;"><button onclick="window.print()" style="background:#1F4D3A;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;">Print this bill</button></div>` : ''}
         </div>
+        <div class="noprint" style="text-align:center;margin-top:18px;">
+          ${mode==='view' ? `<button onclick="window.print()" style="background:#1F4D3A;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;margin:0 4px;">Print this bill</button>` : ''}
+          <button onclick="downloadPDF()" style="background:#E2A33D;color:#1a1a1a;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;font-weight:700;margin:0 4px;">⬇️ Download PDF</button>
+        </div>
+        <script>
+          function downloadPDF(){
+            var btns = document.querySelector('.noprint');
+            btns.style.visibility = 'hidden';
+            html2pdf().set({
+              filename: 'Bill-${billNo}-${shopName.replace(/[^a-zA-Z0-9]/g,'_')}.pdf',
+              margin: 0,
+              jsPDF: { unit: 'cm', format: [21, 15], orientation: 'landscape' },
+              html2canvas: { scale: 2 }
+            }).from(document.querySelector('.sheet')).save().then(function(){
+              btns.style.visibility = 'visible';
+            });
+          }
+        <\/script>
         ${mode==='print' ? `<script>window.print();<\/script>` : ''}
       </body></html>
     `);
@@ -1535,6 +1557,62 @@ function renderReports(){
   document.getElementById('rep-collected').textContent = fmt(total - totalDue > 0 ? total - totalDue : 0);
   document.getElementById('rep-outstanding').textContent = fmt(totalDue);
 }
+
+/* ============ INSTALL AS APP ============ */
+let deferredInstallPrompt = null;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+function renderInstallBanner(){
+  const el = document.getElementById('install-banner');
+  if(!el || isStandalone || localStorage.getItem('bt_install_dismissed')==='1'){
+    if(el) el.innerHTML = '';
+    return;
+  }
+  if(deferredInstallPrompt){
+    el.innerHTML = `
+      <div class="setup-banner" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span>📲 Install Baqala Trader on your phone for quick access</span>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="installApp()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;">Install</button>
+          <button onclick="dismissInstallBanner()" style="background:none;border:none;color:var(--ink-soft);font-size:16px;cursor:pointer;padding:0 4px;">✕</button>
+        </div>
+      </div>`;
+  } else if(isIOS){
+    el.innerHTML = `
+      <div class="setup-banner" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span>📲 To install: tap the Share icon in Safari, then "Add to Home Screen"</span>
+        <button onclick="dismissInstallBanner()" style="background:none;border:none;color:var(--ink-soft);font-size:16px;cursor:pointer;padding:0 4px;flex-shrink:0;">✕</button>
+      </div>`;
+  }
+}
+function dismissInstallBanner(){
+  localStorage.setItem('bt_install_dismissed','1');
+  document.getElementById('install-banner').innerHTML = '';
+}
+async function installApp(){
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  renderInstallBanner();
+}
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  renderInstallBanner();
+});
+window.addEventListener('appinstalled', ()=>{
+  deferredInstallPrompt = null;
+  const el = document.getElementById('install-banner');
+  if(el) el.innerHTML = '';
+});
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+renderInstallBanner();
 
 /* ============ INIT ============ */
 loadAll();
