@@ -730,8 +730,8 @@ function addItemRow(){
     <input type="text" class="i-name" placeholder="Item name" oninput="updateOrderTotal()">
     <div class="grid3">
       <div><span>Qty</span><input type="number" class="i-qty" value="1" min="0" step="0.01" oninput="updateOrderTotal()"></div>
-      <div><span>Cost (SAR)</span><input type="number" class="i-cost" value="0" min="0" step="0.01" oninput="updateOrderTotal()"></div>
-      <div><span>Price (SAR)</span><input type="number" class="i-price" value="0" min="0" step="0.01" oninput="updateOrderTotal()"></div>
+      <div><span>Cost (SAR)</span><input type="number" class="i-cost" value="" placeholder="0.00" min="0" step="0.01" oninput="updateOrderTotal()"></div>
+      <div><span>Price (SAR)</span><input type="number" class="i-price" value="" placeholder="0.00" min="0" step="0.01" oninput="updateOrderTotal()"></div>
     </div>
   `;
   document.getElementById('item-rows').appendChild(div);
@@ -840,14 +840,14 @@ function openPricingForm(o){
   const items = o.bt_order_items || [];
   const rowsHtml = items.map((i, idx)=>{
     const match = PRODUCTS.find(p=>p.id===i.product_id);
-    const defCost = match ? match.cost_price : '';
-    const defPrice = match ? match.sell_price : '';
+    const defCost = match && match.cost_price ? match.cost_price : '';
+    const defPrice = match && match.sell_price ? match.sell_price : '';
     return `<div class="item-row" data-item-id="${i.id}">
       <div class="top"><strong style="font-size:13.5px;">${i.product_name}</strong><span style="margin-left:auto;font-size:12.5px;color:var(--ink-soft);">Qty ${i.quantity}</span></div>
       <div class="grid3">
         <div><span>Qty</span><input type="number" class="p-qty" value="${i.quantity}" min="0" step="0.5" oninput="updatePricingTotal()"></div>
-        <div><span>Your cost</span><input type="number" class="p-cost" value="${defCost}" min="0" step="0.01" oninput="updatePricingTotal()"></div>
-        <div><span>Sell price</span><input type="number" class="p-price" value="${defPrice}" min="0" step="0.01" oninput="updatePricingTotal()"></div>
+        <div><span>Your cost</span><input type="number" class="p-cost" value="${defCost}" placeholder="0.00" min="0" step="0.01" oninput="updatePricingTotal()"></div>
+        <div><span>Sell price</span><input type="number" class="p-price" value="${defPrice}" placeholder="0.00" min="0" step="0.01" oninput="updatePricingTotal()"></div>
       </div>
     </div>`;
   }).join('');
