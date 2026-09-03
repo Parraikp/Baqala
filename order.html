@@ -427,14 +427,18 @@ function viewPreparedBill(idx){
           var sheet = document.querySelector('.sheet');
           btns.style.visibility = 'hidden';
           sheet.style.boxShadow = 'none';
+          sheet.style.width = '15cm';
+          sheet.style.maxWidth = '15cm';
           html2pdf().set({
             filename: 'Bill-${billNo}-${currentShop.name.replace(/[^a-zA-Z0-9]/g,'_')}.pdf',
             margin: 0,
             jsPDF: { unit: 'cm', format: [15, 20], orientation: 'portrait' },
-            html2canvas: { scale: 2 }
+            html2canvas: { scale: 2, windowWidth: 567 }
           }).from(sheet).save().then(function(){
             btns.style.visibility = 'visible';
             sheet.style.boxShadow = '';
+            sheet.style.width = '';
+            sheet.style.maxWidth = '';
           });
         }
       <\/script>
