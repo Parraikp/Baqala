@@ -141,11 +141,13 @@
       <button class="btn" id="scan-btn" style="width:100%;background:#3A5199;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;">
         📷 Scan barcode
       </button>
+      <div id="draft-banner"></div>
       <div id="item-rows"></div>
       <button class="add-item-btn" id="add-item-btn">+ Add item</button>
 
-      <div style="margin-top:20px;">
-        <button class="btn btn-primary" id="submit-order">Send order</button>
+      <div style="display:flex;gap:8px;margin-top:20px;">
+        <button class="btn btn-outline" id="save-draft" style="flex:1;">💾 Save for later</button>
+        <button class="btn btn-primary" id="submit-order" style="flex:1;">Send order</button>
       </div>
     </div>
 
@@ -223,8 +225,58 @@ async function enterShop(data){
 
   const {data: prodData} = await sb.from('bt_products').select('*').order('name');
   products = prodData || [];
+  loadDraftOrNewRow();
+}
+
+/* ============ SAVE FOR LATER (draft) ============ */
+function draftKey(){ return 'bt_draft_' + currentShop.id; }
+
+function loadDraftOrNewRow(){
+  const saved = localStorage.getItem(draftKey());
+  if(saved){
+    try{
+      const items = JSON.parse(saved);
+      if(items.length){
+        document.getElementById('item-rows').innerHTML = '';
+        items.forEach(it=>{
+          addItemRow();
+          const rows = document.querySelectorAll('#item-rows .item-row');
+          const lastRow = rows[rows.length-1];
+          lastRow.querySelector('.i-product').value = it.product_id || '';
+          lastRow.querySelector('.i-qty').value = it.qty || '';
+        });
+        document.getElementById('draft-banner').innerHTML = `
+          <div class="setup-banner" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <span>📝 Continuing your saved items from earlier</span>
+            <button onclick="clearDraft()" style="background:none;border:none;color:var(--red);font-size:12px;text-decoration:underline;cursor:pointer;flex-shrink:0;">Clear</button>
+          </div>`;
+        return;
+      }
+    }catch(e){}
+  }
+  document.getElementById('draft-banner').innerHTML = '';
   addItemRow();
 }
+
+function saveDraft(){
+  const rows = document.querySelectorAll('#item-rows .item-row');
+  const items = [];
+  rows.forEach(r=>{
+    const productId = r.querySelector('.i-product').value;
+    const qty = r.querySelector('.i-qty').value;
+    if(productId) items.push({ product_id: productId, qty });
+  });
+  if(items.length===0){ toast('Add at least one item before saving', true); return; }
+  localStorage.setItem(draftKey(), JSON.stringify(items));
+  toast('💾 Saved — come back anytime to finish and send');
+}
+function clearDraft(){
+  localStorage.removeItem(draftKey());
+  document.getElementById('draft-banner').innerHTML = '';
+  document.getElementById('item-rows').innerHTML = '';
+  addItemRow();
+}
+document.getElementById('save-draft').addEventListener('click', saveDraft);
 
 document.getElementById('pin-continue').addEventListener('click', async ()=>{
   const pin = document.getElementById('pin-input').value.trim();
@@ -598,6 +650,7 @@ document.getElementById('submit-order').addEventListener('click', async ()=>{
   const {error: itemsErr} = await sb.from('bt_order_items').insert(itemsPayload);
   if(itemsErr){ toast(itemsErr.message, true); btn.disabled=false; btn.textContent='Send order'; return; }
 
+  localStorage.removeItem(draftKey());
   document.getElementById('order-step').classList.add('hide');
   document.getElementById('success-step').classList.remove('hide');
 });
