@@ -1187,8 +1187,12 @@ function printBill(orderId, mode){
         @page { size: 15cm 20cm; margin: 6mm 6mm 2.54cm 6mm; }
         *{box-sizing:border-box;}
         html,body{height:100%;}
-        body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:0;font-size:11.5px;height:100%;}
-        .sheet{width:100%;padding:2mm;min-height:100%;display:flex;flex-direction:column;}
+        body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:24px 0;font-size:11.5px;background:#d8dad4;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+        .sheet{width:15cm;min-height:20cm;padding:6mm;display:flex;flex-direction:column;background:#fff;box-shadow:0 3px 16px rgba(0,0,0,.18);}
+        @media print{
+          body{background:#fff;padding:0;display:block;}
+          .sheet{width:100%;min-height:100%;box-shadow:none;padding:2mm;}
+        }
         .head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;}
         .head .en{text-align:left;flex:1;}
         .head .ar{text-align:right;direction:rtl;flex:1;}
@@ -1270,14 +1274,17 @@ function printBill(orderId, mode){
         <script>
           function downloadPDF(){
             var btns = document.querySelector('.noprint');
+            var sheet = document.querySelector('.sheet');
             btns.style.visibility = 'hidden';
+            sheet.style.boxShadow = 'none';
             html2pdf().set({
               filename: 'Bill-${billNo}-${shopName.replace(/[^a-zA-Z0-9]/g,'_')}.pdf',
               margin: 0,
               jsPDF: { unit: 'cm', format: [15, 20], orientation: 'portrait' },
               html2canvas: { scale: 2 }
-            }).from(document.querySelector('.sheet')).save().then(function(){
+            }).from(sheet).save().then(function(){
               btns.style.visibility = 'visible';
+              sheet.style.boxShadow = '';
             });
           }
         <\/script>
