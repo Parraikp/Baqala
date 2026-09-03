@@ -1176,7 +1176,7 @@ function printBill(orderId, mode){
         <td class="c">${Number(i.unit_price).toFixed(2)}</td>
         <td class="c">${Number(i.line_total).toFixed(2)}</td>
       </tr>`).join('');
-    const blankRows = Array.from({length: Math.max(0, 10 - items.length)}).map(()=>`
+    const blankRows = Array.from({length: Math.max(0, 16 - items.length)}).map(()=>`
       <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
 
     const w = window.open('', '_blank');
@@ -1208,7 +1208,7 @@ function printBill(orderId, mode){
         .meta .ar{direction:rtl;}
         .table-wrap{border:3px double #1a3b8f;border-radius:12px;overflow:hidden;margin-top:4px;flex:1;display:flex;flex-direction:column;}
         table{width:100%;height:100%;border-collapse:collapse;}
-        th,td{border:1px solid #3a5199;padding:5px 7px;font-size:11.5px;}
+        th,td{border:1px solid #3a5199;padding:2.5px 6px;font-size:10.5px;}
         th{background:#f0f0ee;text-align:center;font-weight:bold;}
         th .en{display:block;font-size:10.5px;}
         th .ar{display:block;font-size:10.5px;direction:rtl;color:#333;}
