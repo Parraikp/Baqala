@@ -111,12 +111,13 @@
   .btn-text{background:transparent;color:var(--green);padding:8px 4px;}
   .btn-danger-text{background:transparent;color:var(--red);padding:8px 4px;}
   .fab{
-    position:fixed;bottom:88px;right:calc(50% - 240px + 18px);
-    width:54px;height:54px;border-radius:50%;background:var(--marigold);color:#fff;
-    border:none;font-size:26px;box-shadow:0 6px 16px rgba(226,163,61,.45);cursor:pointer;z-index:20;
+    position:fixed;bottom:96px;right:calc(50% - 240px + 20px);
+    width:48px;height:48px;border-radius:50%;background:var(--marigold);color:#fff;
+    border:none;font-size:22px;box-shadow:0 6px 16px rgba(226,163,61,.45);cursor:pointer;z-index:20;
     display:flex;align-items:center;justify-content:center;
   }
-  @media (max-width:520px){.fab{right:18px;}}
+  @media (max-width:520px){.fab{right:20px;}}
+  main{padding-bottom:110px;}
 
   /* Bottom nav */
   nav.tabbar{
@@ -708,6 +709,7 @@ function openOrderForm(){
       <span class="num" id="order-total-display">SAR 0</span>
     </div>
     <p class="profit-note" id="order-profit-note">Expected profit: SAR 0</p>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:6px;">This order will appear in your Purchase list, ready to consolidate before you buy.</p>
     <div style="margin-top:16px;"><button class="btn btn-primary" onclick="saveOrder()">Save order</button></div>
   `);
   addItemRow();
@@ -776,7 +778,7 @@ async function saveOrder(){
   const cost = items.reduce((s,i)=> s + i.qty*i.cost, 0);
 
   const {data: orderData, error: orderErr} = await sb.from('bt_orders').insert({
-    shop_id: shopId, order_date: date, total_amount: total, total_cost: cost, status:'due'
+    shop_id: shopId, order_date: date, total_amount: total, total_cost: cost, status:'requested'
   }).select().single();
   if(orderErr){ toast(orderErr.message, true); return; }
 
@@ -787,7 +789,7 @@ async function saveOrder(){
   const {error: itemsErr} = await sb.from('bt_order_items').insert(itemsPayload);
   if(itemsErr){ toast(itemsErr.message, true); return; }
 
-  toast('Order saved');
+  toast('Order added to purchase list');
   closeSheet();
   await loadAll();
 }
