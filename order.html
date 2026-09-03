@@ -48,10 +48,11 @@
     border-radius:11px;padding:9px 10px;margin-top:9px;
     display:flex;gap:8px;align-items:center;
   }
-  .item-row .row-icon{font-size:16px;flex-shrink:0;}
-  .item-row .i-product{flex:1;min-width:0;background:#fff;}
-  .item-row .i-qty{width:60px;flex:0 0 60px;background:#fff;text-align:center;}
-  .item-row .rm{background:none;border:none;color:var(--red);font-size:15px;font-weight:700;cursor:pointer;padding:2px 4px;flex-shrink:0;}
+  .item-row .row-icon{font-size:16px;flex-shrink:0;align-self:flex-start;margin-top:9px;}
+  .item-row .row-selects{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+  .item-row .row-selects select{background:#fff;}
+  .item-row .i-qty{width:60px;flex:0 0 60px;background:#fff;text-align:center;align-self:flex-start;}
+  .item-row .rm{background:none;border:none;color:var(--red);font-size:15px;font-weight:700;cursor:pointer;padding:2px 4px;flex-shrink:0;align-self:flex-start;}
   .add-item-btn{width:100%;margin-top:10px;border:1.5px dashed var(--marigold);background:var(--card);border-radius:10px;padding:11px;color:#8a6417;font-weight:700;font-size:13.5px;cursor:pointer;}
 
   .success{text-align:center;padding:40px 10px;}
@@ -391,33 +392,48 @@ document.getElementById('detail-back').addEventListener('click', ()=>{
 });
 
 let rowCount = 0;
-function buildProductOptions(){
-  const categories = [...new Set(products.map(p=>p.category).filter(Boolean))];
-  let html = '<option value="">Choose an item...</option>';
-  categories.forEach(cat=>{
-    const items = products.filter(p=>p.category===cat);
-    html += `<optgroup label="${cat}">` + items.map(p=>`<option value="${p.id}">${p.name}</option>`).join('') + `</optgroup>`;
-  });
-  const uncategorized = products.filter(p=>!p.category);
-  if(uncategorized.length){
-    html += `<optgroup label="Other items">` + uncategorized.map(p=>`<option value="${p.id}">${p.name}</option>`).join('') + `</optgroup>`;
-  }
-  return html;
+function getCategories(){
+  return [...new Set(products.map(p=>p.category).filter(Boolean))];
 }
 function addItemRow(){
   rowCount++;
   const rid = 'row-'+rowCount;
+  const categories = getCategories();
+  const catOptions = '<option value="">Category...</option>' + categories.map(c=>`<option value="${c}">${c}</option>`).join('')
+    + '<option value="__uncat__">Other items</option>';
   const div = document.createElement('div');
   div.className = 'item-row';
   div.id = rid;
   div.innerHTML = `
     <span class="row-icon">🧺</span>
-    <select class="i-product">${buildProductOptions()}</select>
+    <div class="row-selects">
+      <select class="i-category" onchange="onCategoryChange('${rid}', this.value)">${catOptions}</select>
+      <select class="i-product" disabled><option value="">Pick a category first</option></select>
+    </div>
     <input type="number" class="i-qty" placeholder="Qty" min="0" step="0.5">
     <button class="rm" onclick="document.getElementById('${rid}').remove()">✕</button>
   `;
   document.getElementById('item-rows').appendChild(div);
 }
+window.onCategoryChange = function(rid, category){
+  const row = document.getElementById(rid);
+  const productSel = row.querySelector('.i-product');
+  let matching;
+  if(category === '__uncat__'){
+    matching = products.filter(p=>!p.category);
+  } else if(category){
+    matching = products.filter(p=>p.category===category);
+  } else {
+    matching = [];
+  }
+  if(matching.length===0){
+    productSel.disabled = true;
+    productSel.innerHTML = '<option value="">No items in this category yet</option>';
+    return;
+  }
+  productSel.disabled = false;
+  productSel.innerHTML = '<option value="">Choose item...</option>' + matching.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+};
 document.getElementById('add-item-btn').addEventListener('click', addItemRow);
 
 document.getElementById('submit-order').addEventListener('click', async ()=>{
