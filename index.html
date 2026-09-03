@@ -1643,9 +1643,18 @@ async function onProductScanSuccess(decodedText){
       const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${decodedText}.json`);
       const data = await res.json();
       if(data.status === 1 && data.product){
-        const suggested = data.product.product_name || data.product.generic_name || '';
-        if(suggested){
-          toast('Found online: "' + suggested + '" — translate/edit the name field');
+        const rawName = data.product.product_name || data.product.generic_name || '';
+        const size = data.product.quantity || '';
+        const fullName = [rawName, size].filter(Boolean).join(' ');
+        if(fullName){
+          let arabicName = '';
+          try{
+            const tRes = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ar&dt=t&q=${encodeURIComponent(fullName)}`);
+            const tData = await tRes.json();
+            arabicName = tData && tData[0] ? tData[0].map(seg=>seg[0]).join('') : '';
+          }catch(te){ /* translation best-effort only */ }
+          nameField.value = arabicName || fullName;
+          toast('Filled in from online lookup — please check/edit the name');
         } else {
           toast('Barcode scanned — enter the product name');
         }

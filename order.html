@@ -537,14 +537,29 @@ async function onScanSuccess(decodedText){
     toast('✅ Added: ' + match.name);
     return;
   }
-  // not in this shop's catalog — try the public database just to suggest a name
+  // not in this shop's catalog — try the public database for a name + size, and translate it
   toast('Barcode not in catalog — checking online...', false);
   try{
     const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${decodedText}.json`);
     const data = await res.json();
     if(data.status === 1 && data.product){
-      const suggestedName = data.product.product_name || data.product.generic_name || '';
-      alert(`This item isn't in the shop's list yet.\n\nBarcode: ${decodedText}\nPossible name: ${suggestedName || '(unknown)'}\n\nPlease ask the shop owner to add it, then try again.`);
+      const rawName = data.product.product_name || data.product.generic_name || '';
+      const size = data.product.quantity || ''; // e.g. "330 ml", "1.5 l"
+      const fullName = [rawName, size].filter(Boolean).join(' ');
+      let arabicName = '';
+      if(fullName){
+        try{
+          const tRes = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ar&dt=t&q=${encodeURIComponent(fullName)}`);
+          const tData = await tRes.json();
+          arabicName = tData && tData[0] ? tData[0].map(seg=>seg[0]).join('') : '';
+        }catch(te){ /* translation best-effort only */ }
+      }
+      let msg = `This item isn't in the shop's list yet.\n\nBarcode: ${decodedText}`;
+      if(fullName) msg += `\nName (English): ${fullName}`;
+      if(arabicName) msg += `\nName (Arabic, auto-translated — please double check): ${arabicName}`;
+      if(!fullName) msg += `\nName: (not found in the online database)`;
+      msg += `\n\nPlease ask the shop owner to add it, then try again.`;
+      alert(msg);
     } else {
       alert(`This item isn't in the shop's list yet.\n\nBarcode: ${decodedText}\n\nPlease ask the shop owner to add it, then try again.`);
     }
