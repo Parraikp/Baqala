@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root{
     --green:#1F4D3A;
@@ -59,6 +60,7 @@
 
   main{padding:0 16px 16px;}
   .view{display:none;}
+  .hide{display:none !important;}
   .view.active{display:block;}
 
   /* Cards */
@@ -372,6 +374,17 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- BARCODE SCANNER OVERLAY -->
+<div id="scanner-overlay" class="hide" style="position:fixed;inset:0;background:#000;z-index:200;display:flex;flex-direction:column;">
+  <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;background:#111;">
+    <span style="color:#fff;font-weight:600;font-size:15px;">Scan a barcode</span>
+    <button id="scanner-close" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+  </div>
+  <div id="scanner-reader" style="flex:1;"></div>
+  <p style="color:#ccc;text-align:center;font-size:12.5px;padding:12px;">Point the camera at the barcode</p>
+</div>
+
 
 <script>
 /* ============ CONFIG ============ */
@@ -1363,6 +1376,11 @@ function openProductForm(existing){
     <datalist id="category-options">${categories.map(c=>`<option value="${c}">`).join('')}</datalist>
     <label>Product name</label>
     <input type="text" id="f-prod-name" value="${p.name||''}" placeholder="e.g. بيبسي 1.5 لتر">
+    <label>Barcode</label>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="f-prod-barcode" value="${p.barcode||''}" placeholder="Scan or type barcode" style="flex:1;">
+      <button type="button" onclick="startProductScan()" style="background:#3A5199;color:#fff;border:none;border-radius:10px;padding:0 16px;font-size:18px;cursor:pointer;">📷</button>
+    </div>
     <label>Unit</label>
     <select id="f-prod-unit-select" onchange="document.getElementById('f-prod-unit-other').style.display = this.value==='__other__' ? 'block' : 'none';">${unitOptions}</select>
     <input type="text" id="f-prod-unit-other" value="${isOther?currentUnit:''}" placeholder="Type custom unit" style="margin-top:8px;display:${isOther?'block':'none'};">
@@ -1386,7 +1404,8 @@ async function saveProduct(id){
     unit,
     cost_price: parseFloat(document.getElementById('f-prod-cost').value)||0,
     sell_price: parseFloat(document.getElementById('f-prod-price').value)||0,
-    supplier_id: document.getElementById('f-prod-supplier').value || null
+    supplier_id: document.getElementById('f-prod-supplier').value || null,
+    barcode: document.getElementById('f-prod-barcode').value.trim() || null
   };
   const q = id ? sb.from('bt_products').update(payload).eq('id', id) : sb.from('bt_products').insert(payload);
   const {error} = await q;
@@ -1581,6 +1600,64 @@ function renderReports(){
   document.getElementById('stat-profit').textContent = fmt(profit);
   document.getElementById('rep-collected').textContent = fmt(total - totalDue > 0 ? total - totalDue : 0);
   document.getElementById('rep-outstanding').textContent = fmt(totalDue);
+}
+
+/* ============ BARCODE SCANNER (product setup) ============ */
+let html5QrCode = null;
+document.getElementById('scanner-close').addEventListener('click', stopProductScan);
+
+function startProductScan(){
+  document.getElementById('scanner-overlay').classList.remove('hide');
+  html5QrCode = new Html5Qrcode("scanner-reader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 260, height: 160 } },
+    onProductScanSuccess,
+    ()=>{}
+  ).catch((err)=>{
+    toast('Could not access camera: ' + err, true);
+    stopProductScan();
+  });
+}
+function stopProductScan(){
+  document.getElementById('scanner-overlay').classList.add('hide');
+  if(html5QrCode){
+    html5QrCode.stop().then(()=> html5QrCode.clear()).catch(()=>{});
+    html5QrCode = null;
+  }
+}
+async function onProductScanSuccess(decodedText){
+  stopProductScan();
+  const barcodeField = document.getElementById('f-prod-barcode');
+  if(barcodeField) barcodeField.value = decodedText;
+
+  const existingMatch = PRODUCTS.find(p=>p.barcode===decodedText);
+  if(existingMatch){
+    toast('This barcode is already used by: ' + existingMatch.name, true);
+    return;
+  }
+
+  const nameField = document.getElementById('f-prod-name');
+  if(nameField && !nameField.value.trim()){
+    try{
+      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${decodedText}.json`);
+      const data = await res.json();
+      if(data.status === 1 && data.product){
+        const suggested = data.product.product_name || data.product.generic_name || '';
+        if(suggested){
+          toast('Found online: "' + suggested + '" — translate/edit the name field');
+        } else {
+          toast('Barcode scanned — enter the product name');
+        }
+      } else {
+        toast('Barcode scanned — enter the product name');
+      }
+    }catch(e){
+      toast('Barcode scanned — enter the product name');
+    }
+  } else {
+    toast('Barcode added');
+  }
 }
 
 /* ============ INSTALL AS APP ============ */

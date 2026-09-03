@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root{
     --green:#1F4D3A; --green-dark:#153529; --marigold:#E2A33D;
@@ -137,6 +138,9 @@
 
     <div id="new-order-panel">
       <label>Items needed</label>
+      <button class="btn" id="scan-btn" style="width:100%;background:#3A5199;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;">
+        📷 Scan barcode
+      </button>
       <div id="item-rows"></div>
       <button class="add-item-btn" id="add-item-btn">+ Add item</button>
 
@@ -179,6 +183,17 @@
 
 </div>
 <div class="toast" id="toast"></div>
+
+<!-- BARCODE SCANNER OVERLAY -->
+<div id="scanner-overlay" class="hide" style="position:fixed;inset:0;background:#000;z-index:200;display:flex;flex-direction:column;">
+  <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;background:#111;">
+    <span style="color:#fff;font-weight:600;font-size:15px;">Scan a barcode</span>
+    <button id="scanner-close" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+  </div>
+  <div id="scanner-reader" style="flex:1;"></div>
+  <p style="color:#ccc;text-align:center;font-size:12.5px;padding:12px;">Point your camera at the barcode</p>
+</div>
+
 
 <script>
 const SUPABASE_URL = "https://zpomibqrmtjyscirzdvw.supabase.co";
@@ -483,6 +498,60 @@ function addItemRow(){
   document.getElementById('item-rows').appendChild(div);
 }
 document.getElementById('add-item-btn').addEventListener('click', addItemRow);
+
+/* ============ BARCODE SCANNER ============ */
+let html5QrCode = null;
+
+document.getElementById('scan-btn').addEventListener('click', startScanner);
+document.getElementById('scanner-close').addEventListener('click', stopScanner);
+
+function startScanner(){
+  document.getElementById('scanner-overlay').classList.remove('hide');
+  html5QrCode = new Html5Qrcode("scanner-reader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 260, height: 160 } },
+    onScanSuccess,
+    ()=>{} // ignore per-frame scan failures (normal while searching)
+  ).catch((err)=>{
+    toast('Could not access camera: ' + err, true);
+    stopScanner();
+  });
+}
+function stopScanner(){
+  document.getElementById('scanner-overlay').classList.add('hide');
+  if(html5QrCode){
+    html5QrCode.stop().then(()=> html5QrCode.clear()).catch(()=>{});
+    html5QrCode = null;
+  }
+}
+async function onScanSuccess(decodedText){
+  stopScanner();
+  const match = products.find(p=>p.barcode===decodedText);
+  if(match){
+    addItemRow();
+    const rows = document.querySelectorAll('#item-rows .item-row');
+    const lastRow = rows[rows.length-1];
+    lastRow.querySelector('.i-product').value = match.id;
+    lastRow.querySelector('.i-qty').value = 1;
+    toast('✅ Added: ' + match.name);
+    return;
+  }
+  // not in this shop's catalog — try the public database just to suggest a name
+  toast('Barcode not in catalog — checking online...', false);
+  try{
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${decodedText}.json`);
+    const data = await res.json();
+    if(data.status === 1 && data.product){
+      const suggestedName = data.product.product_name || data.product.generic_name || '';
+      alert(`This item isn't in the shop's list yet.\n\nBarcode: ${decodedText}\nPossible name: ${suggestedName || '(unknown)'}\n\nPlease ask the shop owner to add it, then try again.`);
+    } else {
+      alert(`This item isn't in the shop's list yet.\n\nBarcode: ${decodedText}\n\nPlease ask the shop owner to add it, then try again.`);
+    }
+  }catch(e){
+    alert(`This item isn't in the shop's list yet.\n\nBarcode: ${decodedText}\n\nPlease ask the shop owner to add it, then try again.`);
+  }
+}
 
 document.getElementById('submit-order').addEventListener('click', async ()=>{
   const rows = document.querySelectorAll('#item-rows .item-row');
