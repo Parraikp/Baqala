@@ -1128,6 +1128,7 @@ function printReport(){
   const w = window.open('', '_blank');
   w.document.write(`
     <html><head><title>Report ${d.from} to ${d.to}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
       @page { size: A4; margin: 20mm; }
       body{font-family:Arial,sans-serif;color:#1a1a1a;}
@@ -1184,13 +1185,14 @@ function printBill(orderId, mode){
     const w = window.open('', '_blank');
     w.document.write(`
       <html><head><title>Bill — ${shopName}</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
       <style>
         @page { size: 15cm 20cm; margin: 6mm 6mm 2.54cm 6mm; }
         *{box-sizing:border-box;}
         html,body{height:100%;}
         body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:24px 0;font-size:11.5px;background:#d8dad4;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
-        .sheet{width:15cm;min-height:20cm;padding:6mm;display:flex;flex-direction:column;background:#fff;box-shadow:0 3px 16px rgba(0,0,0,.18);}
+        .sheet{width:100%;max-width:15cm;min-height:20cm;padding:6mm;display:flex;flex-direction:column;background:#fff;box-shadow:0 3px 16px rgba(0,0,0,.18);}
         @media print{
           body{background:#fff;padding:0;display:block;}
           .sheet{width:100%;min-height:100%;box-shadow:none;padding:2mm;}
@@ -1514,6 +1516,7 @@ function printPurchaseList(supName, rows, mode){
   const w = window.open('', '_blank');
   w.document.write(`
     <html><head><title>Purchase order — ${supName}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
       @page { size: A4; margin: 20mm; }
       body{font-family:Arial,sans-serif;color:#1a1a1a;display:flex;justify-content:center;}

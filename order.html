@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Send order — Baqala Trader</title>
+<link rel="manifest" href="order-manifest.json">
+<meta name="theme-color" content="#1F4D3A">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -24,6 +27,7 @@
   .brand p{font-size:12px;color:var(--ink-soft);margin:0;}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;}
+  .setup-banner{background:var(--marigold-soft, #FBF1DE);border:1px solid var(--marigold);border-radius:12px;padding:12px 14px;font-size:13px;margin-bottom:16px;}
   label{font-size:12.5px;font-weight:600;color:var(--ink-soft);display:block;margin:0 0 6px;}
   input[type=text],input[type=number],select{
     width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:10px;
@@ -108,6 +112,8 @@
     <div><h1>Baqala Trader</h1><p>Send your order</p></div>
   </div>
 
+  <div id="install-banner"></div>
+
   <!-- STEP 1: PIN entry -->
   <div class="card" id="pin-step">
     <label>Enter your shop PIN</label>
@@ -120,7 +126,8 @@
   <div id="order-step" class="hide">
     <div class="shop-banner">
       <div class="icon" id="shop-initials"></div>
-      <div><p class="name" id="shop-name"></p><p class="sub" id="shop-sub">Add the items you need below</p></div>
+      <div style="flex:1;"><p class="name" id="shop-name"></p><p class="sub" id="shop-sub">Add the items you need below</p></div>
+      <button onclick="switchShop()" style="background:none;border:none;color:var(--ink-soft);font-size:11px;text-decoration:underline;cursor:pointer;flex-shrink:0;">Not you?</button>
     </div>
 
     <div class="tabs">
@@ -191,6 +198,19 @@ function toast(msg, isErr){
 function initials(name){ return (name||'?').trim().split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
 function fmt(n){ return 'SAR ' + (Number(n)||0).toLocaleString('en-US',{maximumFractionDigits:2}); }
 
+async function enterShop(data){
+  currentShop = data;
+  localStorage.setItem('bt_shop_pin', data.pin);
+  document.getElementById('shop-initials').textContent = initials(data.name);
+  document.getElementById('shop-name').textContent = data.name;
+  document.getElementById('pin-step').classList.add('hide');
+  document.getElementById('order-step').classList.remove('hide');
+
+  const {data: prodData} = await sb.from('bt_products').select('*').order('name');
+  products = prodData || [];
+  addItemRow();
+}
+
 document.getElementById('pin-continue').addEventListener('click', async ()=>{
   const pin = document.getElementById('pin-input').value.trim();
   const errEl = document.getElementById('pin-err');
@@ -203,16 +223,26 @@ document.getElementById('pin-continue').addEventListener('click', async ()=>{
     errEl.style.display = 'block';
     return;
   }
-  currentShop = data;
-  document.getElementById('shop-initials').textContent = initials(data.name);
-  document.getElementById('shop-name').textContent = data.name;
-  document.getElementById('pin-step').classList.add('hide');
-  document.getElementById('order-step').classList.remove('hide');
-
-  const {data: prodData} = await sb.from('bt_products').select('*').order('name');
-  products = prodData || [];
-  addItemRow();
+  await enterShop(data);
 });
+
+// Auto sign-in if a PIN was remembered from last time
+(async function tryAutoLogin(){
+  const savedPin = localStorage.getItem('bt_shop_pin');
+  if(!savedPin) return;
+  const {data} = await sb.from('bt_shops').select('*').eq('pin', savedPin).maybeSingle();
+  if(data) await enterShop(data);
+})();
+
+function switchShop(){
+  localStorage.removeItem('bt_shop_pin');
+  currentShop = null;
+  document.getElementById('order-step').classList.add('hide');
+  document.getElementById('detail-step').classList.add('hide');
+  document.getElementById('success-step').classList.add('hide');
+  document.getElementById('pin-step').classList.remove('hide');
+  document.getElementById('pin-input').value = '';
+}
 
 /* ---- Tabs ---- */
 document.getElementById('tab-new').addEventListener('click', ()=>{
@@ -324,12 +354,13 @@ function viewPreparedBill(idx){
   const w = window.open('', '_blank');
   w.document.write(`
     <html><head><title>Bill — ${currentShop.name}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
     <style>
       @page { size: 15cm 20cm; margin: 6mm 6mm 2.54cm 6mm; }
       *{box-sizing:border-box;} html,body{height:100%;}
       body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:24px 0;font-size:11.5px;background:#d8dad4;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
-      .sheet{width:15cm;min-height:20cm;padding:6mm;display:flex;flex-direction:column;background:#fff;box-shadow:0 3px 16px rgba(0,0,0,.18);}
+      .sheet{width:100%;max-width:15cm;min-height:20cm;padding:6mm;display:flex;flex-direction:column;background:#fff;box-shadow:0 3px 16px rgba(0,0,0,.18);}
       @media print{
         body{background:#fff;padding:0;display:block;}
         .sheet{width:100%;min-height:100%;box-shadow:none;padding:2mm;}
@@ -491,6 +522,62 @@ document.getElementById('send-another').addEventListener('click', ()=>{
   document.getElementById('new-order-panel').classList.remove('hide');
   document.getElementById('history-panel').classList.add('hide');
 });
+
+/* ============ INSTALL AS APP ============ */
+let deferredInstallPrompt = null;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+function renderInstallBanner(){
+  const el = document.getElementById('install-banner');
+  if(!el || isStandalone || localStorage.getItem('bt_order_install_dismissed')==='1'){
+    if(el) el.innerHTML = '';
+    return;
+  }
+  if(deferredInstallPrompt){
+    el.innerHTML = `
+      <div class="setup-banner" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span>📲 Install this app on your phone for quick access</span>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="installApp()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;">Install</button>
+          <button onclick="dismissInstallBanner()" style="background:none;border:none;color:var(--ink-soft);font-size:16px;cursor:pointer;padding:0 4px;">✕</button>
+        </div>
+      </div>`;
+  } else if(isIOS){
+    el.innerHTML = `
+      <div class="setup-banner" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span>📲 To install: tap the Share icon in Safari, then "Add to Home Screen"</span>
+        <button onclick="dismissInstallBanner()" style="background:none;border:none;color:var(--ink-soft);font-size:16px;cursor:pointer;padding:0 4px;flex-shrink:0;">✕</button>
+      </div>`;
+  }
+}
+function dismissInstallBanner(){
+  localStorage.setItem('bt_order_install_dismissed','1');
+  document.getElementById('install-banner').innerHTML = '';
+}
+async function installApp(){
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  renderInstallBanner();
+}
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  renderInstallBanner();
+});
+window.addEventListener('appinstalled', ()=>{
+  deferredInstallPrompt = null;
+  const el = document.getElementById('install-banner');
+  if(el) el.innerHTML = '';
+});
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+renderInstallBanner();
 </script>
 </body>
 </html>
