@@ -48,10 +48,11 @@
     border-radius:11px;padding:9px 10px;margin-top:9px;
     display:flex;gap:8px;align-items:center;
   }
-  .item-row .row-icon{font-size:16px;flex-shrink:0;}
-  .item-row .i-name{flex:1;min-width:0;background:#fff;}
-  .item-row .i-qty{width:64px;flex:0 0 64px;background:#fff;text-align:center;}
-  .item-row .rm{background:none;border:none;color:var(--red);font-size:15px;font-weight:700;cursor:pointer;padding:2px 4px;flex-shrink:0;}
+  .item-row .row-icon{font-size:16px;flex-shrink:0;align-self:flex-start;margin-top:9px;}
+  .item-row .row-selects{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+  .item-row .row-selects select{background:#fff;}
+  .item-row .i-qty{width:64px;flex:0 0 64px;background:#fff;text-align:center;align-self:flex-start;}
+  .item-row .rm{background:none;border:none;color:var(--red);font-size:15px;font-weight:700;cursor:pointer;padding:2px 4px;flex-shrink:0;align-self:flex-start;}
   .add-item-btn{width:100%;margin-top:10px;border:1.5px dashed var(--marigold);background:var(--card);border-radius:10px;padding:11px;color:#8a6417;font-weight:700;font-size:13.5px;cursor:pointer;}
 
   .success{text-align:center;padding:40px 10px;}
@@ -120,13 +121,7 @@
 
     <div id="new-order-panel">
       <label>Items needed</label>
-      <label>Items needed</label>
-      <button class="btn" id="voice-btn" style="width:100%;background:var(--marigold);color:#1a1a1a;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;">
-        🎤 Speak an item (اردو میں بولیں)
-      </button>
-      <p id="voice-status" style="font-size:12px;color:var(--ink-soft);text-align:center;margin:-4px 0 10px;display:none;"></p>
       <div id="item-rows"></div>
-      <datalist id="product-options"></datalist>
       <button class="add-item-btn" id="add-item-btn">+ Add item</button>
 
       <div style="margin-top:20px;">
@@ -206,7 +201,6 @@ document.getElementById('pin-continue').addEventListener('click', async ()=>{
 
   const {data: prodData} = await sb.from('bt_products').select('*').order('name');
   products = prodData || [];
-  document.getElementById('product-options').innerHTML = products.map(p=>`<option value="${p.name}">`).join('');
   addItemRow();
 });
 
@@ -313,161 +307,62 @@ document.getElementById('detail-back').addEventListener('click', ()=>{
 });
 
 let rowCount = 0;
+function getCategories(){
+  return [...new Set(products.map(p=>p.category).filter(Boolean))];
+}
 function addItemRow(){
   rowCount++;
   const rid = 'row-'+rowCount;
+  const categories = getCategories();
+  const catOptions = '<option value="">Category...</option>' + categories.map(c=>`<option value="${c}">${c}</option>`).join('')
+    + '<option value="__uncat__">Other items</option>';
   const div = document.createElement('div');
   div.className = 'item-row';
   div.id = rid;
   div.innerHTML = `
     <span class="row-icon">🧺</span>
-    <input type="text" class="i-name" list="product-options" placeholder="Item name">
+    <div class="row-selects">
+      <select class="i-category" onchange="onCategoryChange('${rid}', this.value)">${catOptions}</select>
+      <select class="i-product" disabled><option value="">Pick category first</option></select>
+    </div>
     <input type="number" class="i-qty" placeholder="Qty" min="0" step="0.5">
     <button class="rm" onclick="document.getElementById('${rid}').remove()">✕</button>
   `;
   document.getElementById('item-rows').appendChild(div);
 }
-document.getElementById('add-item-btn').addEventListener('click', addItemRow);
-
-/* ============ VOICE INPUT (Urdu → Arabic product matching) ============ */
-// Common Urdu words shopkeepers might say, mapped to the Arabic product names in the catalog.
-// Matching is substring-based and checks the longest keys first for accuracy.
-const URDU_TO_ARABIC = {
-  'دودھ':'حليب', 'دوده':'حليب', 'ملک':'حليب',
-  'کولڈ ڈرنک':'مشروبات غازية', 'بوتل':'مشروبات غازية', 'سافٹ ڈرنک':'مشروبات غازية',
-  'جوس':'عصير',
-  'پانی':'ماء',
-  'چاول':'أرز',
-  'تیل':'زيت',
-  'چینی':'سكر',
-  'چائے':'شاي', 'چاۓ':'شاي',
-  'کافی':'قهوة',
-  'آٹا':'طحين', 'آتا':'طحين',
-  'نمک':'ملح',
-  'دال':'عدس', 'مسور':'عدس',
-  'مکرونی':'مكرونة', 'نوڈلز':'مكرونة',
-  'روٹی':'خبز', 'نان':'خبز', 'بریڈ':'خبز',
-  'انڈے':'بيض', 'انڈا':'بيض',
-  'پنیر':'جبن', 'چیز':'جبن',
-  'مکھن':'زبدة', 'بٹر':'زبدة',
-  'دہی':'لبن', 'دهی':'لبن',
-  'صابن':'صابون', 'صابون':'صابون',
-  'شیمپو':'شامبو',
-  'ٹوتھ پیسٹ':'معجون أسنان', 'منجن':'معجون أسنان',
-  'ڈٹرجنٹ':'منظف', 'صفائی':'منظف',
-  'ٹشو':'مناديل',
-  'کھجور':'تمر',
-  'بسکٹ':'بسكويت',
-  'چاکلیٹ':'شوكولاتة', 'چاکلیت':'شوكولاتة'
-};
-const URDU_NUMBER_WORDS = {
-  'ایک':1,'دو':2,'تین':3,'چار':4,'پانچ':5,'چھ':6,'چھے':6,'سات':7,'آٹھ':8,'نو':9,'دس':10,
-  'گیارہ':11,'بارہ':12,'تیرہ':13,'چودہ':14,'پندرہ':15,'بیس':20,'پچیس':25,'تیس':30
-};
-function toWesternDigits(str){
-  const map = {'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9'};
-  return str.replace(/[۰-۹]/g, ch => map[ch] || ch);
-}
-function parseVoiceTranscript(transcript){
-  let text = toWesternDigits(transcript.trim());
-  let qty = null;
-
-  // try digit match first
-  const digitMatch = text.match(/\d+(\.\d+)?/);
-  if(digitMatch){
-    qty = parseFloat(digitMatch[0]);
-    text = text.replace(digitMatch[0], '').trim();
+window.onCategoryChange = function(rid, category){
+  const row = document.getElementById(rid);
+  const productSel = row.querySelector('.i-product');
+  let matching;
+  if(category === '__uncat__'){
+    matching = products.filter(p=>!p.category);
+  } else if(category){
+    matching = products.filter(p=>p.category===category);
   } else {
-    // try Urdu number words
-    for(const word in URDU_NUMBER_WORDS){
-      if(text.includes(word)){
-        qty = URDU_NUMBER_WORDS[word];
-        text = text.replace(word, '').trim();
-        break;
-      }
-    }
+    matching = [];
   }
-  if(!qty) qty = 1;
-
-  // strip common filler words (adad = piece/count, dedo/de do = give, chahiye = need)
-  text = text.replace(/\b(عدد|ادد|adad|دیدو|دے دو|چاہیے|چاہئے|چاہیۓ)\b/g, '').trim();
-
-  // match against Urdu→Arabic dictionary (longest key first for accuracy)
-  const keys = Object.keys(URDU_TO_ARABIC).sort((a,b)=> b.length - a.length);
-  let matchedArabic = null;
-  for(const key of keys){
-    if(text.includes(key)){ matchedArabic = URDU_TO_ARABIC[key]; break; }
+  if(matching.length===0){
+    productSel.disabled = true;
+    productSel.innerHTML = '<option value="">No items in this category</option>';
+    return;
   }
-
-  return { qty, rawText: text, matchedArabic };
-}
-
-const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-const voiceBtn = document.getElementById('voice-btn');
-const voiceStatus = document.getElementById('voice-status');
-
-if(!SpeechRecognitionAPI){
-  voiceBtn.style.display = 'none';
-} else {
-  const recognition = new SpeechRecognitionAPI();
-  recognition.lang = 'ur-PK';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-  let listening = false;
-
-  voiceBtn.addEventListener('click', ()=>{
-    if(listening) return;
-    listening = true;
-    voiceBtn.textContent = '🎙️ Listening... speak now';
-    voiceStatus.style.display = 'none';
-    try{ recognition.start(); }catch(e){}
-  });
-
-  recognition.addEventListener('result', (event)=>{
-    const transcript = event.results[0][0].transcript;
-    const {qty, rawText, matchedArabic} = parseVoiceTranscript(transcript);
-
-    addItemRow();
-    const rows = document.querySelectorAll('#item-rows .item-row');
-    const lastRow = rows[rows.length-1];
-
-    if(matchedArabic){
-      lastRow.querySelector('.i-name').value = matchedArabic;
-      lastRow.querySelector('.i-qty').value = qty;
-      voiceStatus.textContent = `✅ Heard "${transcript}" — added ${matchedArabic} × ${qty}`;
-    } else {
-      lastRow.querySelector('.i-name').value = rawText || transcript;
-      lastRow.querySelector('.i-qty').value = qty;
-      voiceStatus.textContent = `⚠️ Heard "${transcript}" — couldn't match a known item, please check the row`;
-    }
-    voiceStatus.style.display = 'block';
-  });
-
-  recognition.addEventListener('error', (event)=>{
-    voiceStatus.textContent = event.error==='not-allowed'
-      ? 'Microphone permission needed — please allow access and try again.'
-      : 'Could not hear you clearly, please try again.';
-    voiceStatus.style.display = 'block';
-  });
-
-  recognition.addEventListener('end', ()=>{
-    listening = false;
-    voiceBtn.textContent = '🎤 Speak an item (اردو میں بولیں)';
-  });
-}
+  productSel.disabled = false;
+  productSel.innerHTML = '<option value="">Choose item...</option>' + matching.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+};
+document.getElementById('add-item-btn').addEventListener('click', addItemRow);
 
 document.getElementById('submit-order').addEventListener('click', async ()=>{
   const rows = document.querySelectorAll('#item-rows .item-row');
   const items = [];
   rows.forEach(r=>{
-    const name = r.querySelector('.i-name').value.trim();
+    const productId = r.querySelector('.i-product').value;
     const qty = parseFloat(r.querySelector('.i-qty').value) || 0;
-    const matchedProduct = products.find(p=>p.name===name);
-    if(name && qty>0){
-      items.push({ name, qty, product_id: matchedProduct ? matchedProduct.id : null });
+    const product = products.find(p=>p.id===productId);
+    if(product && qty>0){
+      items.push({ name: product.name, qty, product_id: product.id });
     }
   });
-  if(items.length===0){ toast('Add at least one item with a quantity', true); return; }
+  if(items.length===0){ toast('Pick at least one item and enter a quantity', true); return; }
 
   const btn = document.getElementById('submit-order');
   btn.disabled = true; btn.textContent = 'Sending...';

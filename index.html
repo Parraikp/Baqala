@@ -1276,20 +1276,33 @@ function renderProducts(){
     wrap.innerHTML = emptyState('🧺','No products yet','Add products so orders auto-fill prices.');
     return;
   }
-  wrap.innerHTML = PRODUCTS.map(p=>{
-    const supIdx = SUPPLIERS.findIndex(s=>s.id===p.supplier_id);
-    const sup = supIdx>=0 ? SUPPLIERS[supIdx] : null;
-    const color = sup ? PURCHASE_COLORS[supIdx % PURCHASE_COLORS.length] : '#C7CCC1';
-    return `
-    <div class="chip" style="border-color:${color};" onclick='openProductForm(${JSON.stringify(p)})'>
-      <span class="chip-dot" style="background:${color};"></span>
-      <div class="chip-body">
-        <p class="chip-name">${p.name}</p>
-        <p class="chip-meta">${fmt(p.sell_price)} / ${p.unit}${sup ? ' · '+sup.name : ''}</p>
-      </div>
-    </div>
-  `;
+  // group by category
+  const groups = {};
+  PRODUCTS.forEach(p=>{
+    const cat = p.category || 'Uncategorized';
+    if(!groups[cat]) groups[cat] = [];
+    groups[cat].push(p);
+  });
+  wrap.innerHTML = Object.entries(groups).map(([cat, items], catIdx)=>{
+    const catColor = PURCHASE_COLORS[catIdx % PURCHASE_COLORS.length];
+    const chips = items.map(p=>{
+      const supIdx = SUPPLIERS.findIndex(s=>s.id===p.supplier_id);
+      const sup = supIdx>=0 ? SUPPLIERS[supIdx] : null;
+      return `
+      <div class="chip" style="border-color:${catColor};" onclick='openProductForm(${JSON.stringify(p)})'>
+        <span class="chip-dot" style="background:${catColor};"></span>
+        <div class="chip-body">
+          <p class="chip-name">${p.name}</p>
+          <p class="chip-meta">${fmt(p.sell_price)} / ${p.unit}${sup ? ' · '+sup.name : ''}</p>
+        </div>
+      </div>`;
+    }).join('');
+    return `<p style="font-size:12px;font-weight:700;color:${catColor};margin:14px 0 6px;">${cat}</p>
+      <div class="chip-grid">${chips}</div>`;
   }).join('');
+}
+function getProductCategories(){
+  return [...new Set(PRODUCTS.map(p=>p.category).filter(Boolean))];
 }
 function openProductForm(existing){
   const p = existing || {};
@@ -1299,10 +1312,14 @@ function openProductForm(existing){
   const isOther = currentUnit && !commonUnits.includes(currentUnit);
   const unitOptions = commonUnits.map(u=>`<option value="${u}" ${currentUnit===u?'selected':''}>${u}</option>`).join('')
     + `<option value="__other__" ${isOther?'selected':''}>أخرى (Other — type below)</option>`;
+  const categories = getProductCategories();
   openSheet(`
     <div class="sheet-head"><h3>${existing?'Edit product':'Add product'}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <label>Category</label>
+    <input type="text" id="f-prod-category" list="category-options" value="${p.category||''}" placeholder="e.g. مشروبات باردة (Cold drinks)">
+    <datalist id="category-options">${categories.map(c=>`<option value="${c}">`).join('')}</datalist>
     <label>Product name</label>
-    <input type="text" id="f-prod-name" value="${p.name||''}" placeholder="e.g. Rice 5kg">
+    <input type="text" id="f-prod-name" value="${p.name||''}" placeholder="e.g. بيبسي 1.5 لتر">
     <label>Unit</label>
     <select id="f-prod-unit-select" onchange="document.getElementById('f-prod-unit-other').style.display = this.value==='__other__' ? 'block' : 'none';">${unitOptions}</select>
     <input type="text" id="f-prod-unit-other" value="${isOther?currentUnit:''}" placeholder="Type custom unit" style="margin-top:8px;display:${isOther?'block':'none'};">
@@ -1322,6 +1339,7 @@ async function saveProduct(id){
   const unit = unitSel === '__other__' ? (document.getElementById('f-prod-unit-other').value.trim() || 'pcs') : unitSel;
   const payload = {
     name,
+    category: document.getElementById('f-prod-category').value.trim() || null,
     unit,
     cost_price: parseFloat(document.getElementById('f-prod-cost').value)||0,
     sell_price: parseFloat(document.getElementById('f-prod-price').value)||0,
