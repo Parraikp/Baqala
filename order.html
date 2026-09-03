@@ -349,11 +349,12 @@ function viewPreparedBill(idx){
   const dateStr = new Date(o.order_date).toLocaleDateString('en-GB');
   const rows = items.map(i=>`
     <tr><td class="desc">${i.product_name}</td><td class="c">${i.quantity}</td><td class="c">${Number(i.unit_price).toFixed(2)}</td><td class="c">${Number(i.line_total).toFixed(2)}</td></tr>`).join('');
-  const blankRows = Array.from({length: Math.max(0, 16 - items.length)}).map(()=>`
+  const blankRows = Array.from({length: Math.max(0, 20 - items.length)}).map(()=>`
     <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
   const w = window.open('', '_blank');
   const htmlContent = `
     <html><head><title>Bill — ${currentShop.name}</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
     <style>
@@ -444,7 +445,7 @@ function viewPreparedBill(idx){
       <\/script>
     </body></html>
   `;
-  const blob = new Blob([htmlContent], {type: 'text/html'});
+  const blob = new Blob([htmlContent], {type: 'text/html;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   if(w) w.location.href = url; else window.open(url, '_blank');
 }

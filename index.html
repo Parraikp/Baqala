@@ -1128,6 +1128,7 @@ function printReport(){
   const w = window.open('', '_blank');
   const reportHtml = `
     <html><head><title>Report ${d.from} to ${d.to}</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <style>
       @page { size: A4; margin: 20mm; }
@@ -1160,7 +1161,7 @@ function printReport(){
       <script>window.print();<\/script>
     </body></html>
   `;
-  const reportBlob = new Blob([reportHtml], {type: 'text/html'});
+  const reportBlob = new Blob([reportHtml], {type: 'text/html;charset=utf-8'});
   const reportUrl = URL.createObjectURL(reportBlob);
   if(w) w.location.href = reportUrl; else window.open(reportUrl, '_blank');
 }
@@ -1181,12 +1182,13 @@ function printBill(orderId, mode){
         <td class="c">${Number(i.unit_price).toFixed(2)}</td>
         <td class="c">${Number(i.line_total).toFixed(2)}</td>
       </tr>`).join('');
-    const blankRows = Array.from({length: Math.max(0, 16 - items.length)}).map(()=>`
+    const blankRows = Array.from({length: Math.max(0, 20 - items.length)}).map(()=>`
       <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
 
     const w = window.open('', '_blank');
     const billHtml = `
       <html><head><title>Bill — ${shopName}</title>
+    <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
       <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
       <style>
@@ -1301,7 +1303,7 @@ function printBill(orderId, mode){
         ${mode==='print' ? `<script>window.print();<\/script>` : ''}
       </body></html>
     `;
-    const billBlob = new Blob([billHtml], {type: 'text/html'});
+    const billBlob = new Blob([billHtml], {type: 'text/html;charset=utf-8'});
     const billUrl = URL.createObjectURL(billBlob);
     if(w) w.location.href = billUrl; else window.open(billUrl, '_blank');
   };
@@ -1524,6 +1526,7 @@ function printPurchaseList(supName, rows, mode){
   const w = window.open('', '_blank');
   const purchaseHtml = `
     <html><head><title>Purchase order — ${supName}</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <style>
       @page { size: A4; margin: 20mm; }
@@ -1553,7 +1556,7 @@ function printPurchaseList(supName, rows, mode){
       ${mode==='print' ? `<script>window.print();<\/script>` : ''}
     </body></html>
   `;
-  const purchaseBlob = new Blob([purchaseHtml], {type: 'text/html'});
+  const purchaseBlob = new Blob([purchaseHtml], {type: 'text/html;charset=utf-8'});
   const purchaseUrl = URL.createObjectURL(purchaseBlob);
   if(w) w.location.href = purchaseUrl; else window.open(purchaseUrl, '_blank');
 }
