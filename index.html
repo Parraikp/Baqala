@@ -213,6 +213,16 @@
   .purchase-group-body{padding:0 14px 14px;}
 
   .chip-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  .panel-card{border-radius:16px;padding:16px;margin-bottom:16px;border:1.5px solid var(--line);}
+  .panel-suppliers{background:linear-gradient(160deg, #EAF3EC 0%, var(--card) 55%);border-color:#cfe3d5;}
+  .panel-products{background:linear-gradient(160deg, #FBF1DE 0%, var(--card) 55%);border-color:#f0dcae;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;}
+  .panel-head h2{font-size:15.5px;font-weight:700;margin:0;color:var(--ink);}
+  .panel-head h2 .ur{font-weight:600;color:var(--ink-soft);font-size:13px;margin-right:4px;}
+  .panel-count{font-size:11.5px;color:var(--ink-soft);margin:2px 0 0;}
+  .panel-add{background:var(--green);color:#fff;border:none;border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+  .panel-products .panel-add{background:var(--marigold);color:#1a1a1a;}
   .chip{background:var(--card);border:1.5px solid var(--line);border-radius:11px;padding:9px 10px;display:flex;align-items:center;gap:7px;cursor:pointer;}
   .chip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
   .chip-body{min-width:0;}
@@ -331,12 +341,28 @@
 
     <!-- REPORTS (Suppliers & Products) -->
     <section class="view" id="view-reports">
-      <div class="section-title"><h2>Suppliers</h2><a onclick="openSupplierForm()">+ Add supplier</a></div>
-      <div id="suppliers-list"><div class="spinner"></div></div>
+      <div class="panel-card panel-suppliers">
+        <div class="panel-head">
+          <div>
+            <h2>Suppliers <span class="ur">سپلائرز</span></h2>
+            <p class="panel-count" id="suppliers-count">0 added</p>
+          </div>
+          <button class="panel-add" onclick="openSupplierForm()">+ Add supplier</button>
+        </div>
+        <div id="suppliers-list"><div class="spinner"></div></div>
+      </div>
 
-      <div class="section-title" style="margin-top:22px;"><h2>Products</h2><a onclick="openProductForm()">+ Add product</a></div>
-      <p style="font-size:12px;color:var(--ink-soft);margin:-6px 0 10px;">Tap a product to assign its supplier.</p>
-      <div id="products-list" class="chip-grid"><div class="spinner"></div></div>
+      <div class="panel-card panel-products">
+        <div class="panel-head">
+          <div>
+            <h2>Products <span class="ur">پروڈکٹس</span></h2>
+            <p class="panel-count" id="products-count">0 added</p>
+          </div>
+          <button class="panel-add" onclick="openProductForm()">+ Add product</button>
+        </div>
+        <p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px;">Tap a product to assign its supplier.</p>
+        <div id="products-list" class="chip-grid"><div class="spinner"></div></div>
+      </div>
     </section>
 
   </main>
@@ -1328,6 +1354,8 @@ function printBill(orderId, mode){
 /* ============ PRODUCTS ============ */
 function renderProducts(){
   const wrap = document.getElementById('products-list');
+  const countEl = document.getElementById('products-count');
+  if(countEl) countEl.textContent = PRODUCTS.length + ' added';
   if(PRODUCTS.length===0){
     wrap.innerHTML = emptyState('🧺','No products yet','Add products so orders auto-fill prices.');
     return;
@@ -1398,6 +1426,8 @@ async function saveProduct(id){
 function renderSuppliers(){
   const wrap = document.getElementById('suppliers-list');
   if(!wrap) return;
+  const countEl = document.getElementById('suppliers-count');
+  if(countEl) countEl.textContent = SUPPLIERS.length + ' added';
   if(SUPPLIERS.length===0){
     wrap.innerHTML = emptyState('🚚','No suppliers yet','Add the retailers you buy from.');
     return;
