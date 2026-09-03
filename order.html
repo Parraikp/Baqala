@@ -89,6 +89,16 @@
   .detail-table td{padding:9px 8px;font-size:13px;border-bottom:1px solid var(--line);}
   .detail-table tr:nth-child(even) td{background:var(--bg);}
   .detail-table tr:last-child td{border-bottom:none;}
+
+  .bills-table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;box-shadow:0 1px 6px rgba(34,40,31,.07);min-width:340px;}
+  .bills-table th{background:var(--green);color:#fff;font-size:11px;padding:9px 7px;text-align:left;font-weight:700;}
+  .bills-table th.c{text-align:center;}
+  .bills-table td{padding:9px 7px;font-size:12.5px;border-bottom:1px solid var(--line);vertical-align:top;}
+  .bills-table td.c{text-align:center;}
+  .bills-table tr{cursor:pointer;}
+  .bills-table tr:nth-child(odd) td{background:var(--card);}
+  .bills-table tr:nth-child(even) td{background:var(--bg);}
+  .bills-table tr:active td{background:var(--green-soft);}
 </style>
 </head>
 <body>
@@ -232,41 +242,38 @@ async function loadOrderHistory(){
     wrap.innerHTML = '<p style="color:var(--ink-soft);font-size:13px;text-align:center;padding:20px 0;">No past orders yet.</p>';
     return;
   }
-  wrap.innerHTML = shopOrders.map((o,idx)=>{
+
+  const rowsHtml = shopOrders.map((o,idx)=>{
     const itemCount = (o.bt_order_items||[]).length;
-    const dateStr = new Date(o.order_date).toDateString();
-    const billNo = o.bill_number ? '#'+String(o.bill_number).padStart(4,'0') : null;
+    const dateStr = new Date(o.order_date).toLocaleDateString('en-GB');
+    const billNo = o.bill_number ? '#'+String(o.bill_number).padStart(4,'0') : '—';
     const paid = Number(o.amount_paid)||0;
     const balance = Number(o.total_amount) - paid;
 
-    let amountLine, subLine;
-    if(o.status==='requested'){
-      amountLine = 'Waiting for price';
-      subLine = `${itemCount} item${itemCount!==1?'s':''}`;
-    } else if(o.status==='paid'){
-      amountLine = fmt(o.total_amount);
-      subLine = `${billNo||''} · Fully paid`;
-    } else if(o.status==='partial'){
-      amountLine = fmt(balance) + ' left';
-      subLine = `${billNo||''} · Paid ${fmt(paid)} of ${fmt(o.total_amount)}`;
-    } else {
-      amountLine = fmt(o.total_amount);
-      subLine = `${billNo||''} · Nothing paid yet`;
-    }
+    const detailCell = o.status==='requested'
+      ? `${dateStr}<br><span style="font-size:11px;color:var(--ink-soft);">${itemCount} item${itemCount!==1?'s':''}</span>`
+      : `${dateStr}<br><span style="font-size:11px;color:var(--ink-soft);">${billNo}</span>`;
 
-    return `<div class="order-card" onclick="viewOrderDetail(${idx})">
-      <div class="top-row">
-        <div>
-          <p class="date">${dateStr}</p>
-          <p class="items-count">${subLine}</p>
-        </div>
-        <div style="text-align:right;">
-          <p class="amt">${amountLine}</p>
-          <span class="tag ${o.status}">${o.status}</span>
-        </div>
-      </div>
-    </div>`;
+    const amountCell = o.status==='requested' ? '—' : fmt(o.total_amount);
+    const paidCell = o.status==='requested' ? '—' : fmt(paid);
+    const balanceCell = o.status==='requested' ? '—' : fmt(balance);
+    const balanceColor = o.status==='requested' ? 'var(--ink-soft)' : (balance>0.01 ? 'var(--red)' : 'var(--green)');
+
+    return `<tr onclick="viewOrderDetail(${idx})">
+      <td>${detailCell}<br><span class="tag ${o.status}" style="margin-top:3px;display:inline-block;">${o.status}</span></td>
+      <td class="c">${amountCell}</td>
+      <td class="c" style="color:var(--green);font-weight:700;">${paidCell}</td>
+      <td class="c" style="color:${balanceColor};font-weight:700;">${balanceCell}</td>
+    </tr>`;
   }).join('');
+
+  wrap.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table class="bills-table">
+        <thead><tr><th>Details</th><th class="c">Bill</th><th class="c">Paid</th><th class="c">Balance</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
 }
 window.viewOrderDetail = function(idx){
   const o = shopOrders[idx];
