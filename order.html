@@ -157,6 +157,7 @@
         <tbody id="detail-items"></tbody>
       </table>
       <div id="detail-total"></div>
+      <div id="detail-view-bill-wrap"></div>
     </div>
   </div>
 
@@ -251,8 +252,8 @@ async function loadOrderHistory(){
     const balance = Number(o.total_amount) - paid;
 
     const detailCell = o.status==='requested'
-      ? `${dateStr}<br><span style="font-size:11px;color:var(--ink-soft);">${itemCount} item${itemCount!==1?'s':''}</span>`
-      : `${dateStr}<br><span style="font-size:11px;color:var(--ink-soft);">${billNo}</span>`;
+      ? `<span style="font-weight:700;">${dateStr}</span> <span style="color:var(--ink-soft);">· ${itemCount} item${itemCount!==1?'s':''}</span>`
+      : `<span style="font-weight:700;">${dateStr}</span> <span style="color:var(--ink-soft);">${billNo}</span>`;
 
     const amountCell = o.status==='requested' ? '—' : fmt(o.total_amount);
     const paidCell = o.status==='requested' ? '—' : fmt(paid);
@@ -260,7 +261,7 @@ async function loadOrderHistory(){
     const balanceColor = o.status==='requested' ? 'var(--ink-soft)' : (balance>0.01 ? 'var(--red)' : 'var(--green)');
 
     return `<tr onclick="viewOrderDetail(${idx})">
-      <td>${detailCell}<br><span class="tag ${o.status}" style="margin-top:3px;display:inline-block;">${o.status}</span></td>
+      <td style="white-space:nowrap;">${detailCell}<br><span class="tag ${o.status}" style="margin-top:3px;display:inline-block;">${o.status}</span></td>
       <td class="c">${amountCell}</td>
       <td class="c" style="color:var(--green);font-weight:700;">${paidCell}</td>
       <td class="c" style="color:${balanceColor};font-weight:700;">${balanceCell}</td>
@@ -270,6 +271,7 @@ async function loadOrderHistory(){
   wrap.innerHTML = `
     <div style="overflow-x:auto;">
       <table class="bills-table">
+        <colgroup><col style="width:46%;"><col style="width:18%;"><col style="width:18%;"><col style="width:18%;"></colgroup>
         <thead><tr><th>Details</th><th class="c">Bill</th><th class="c">Paid</th><th class="c">Balance</th></tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
@@ -307,7 +309,83 @@ window.viewOrderDetail = function(idx){
     `;
   }
   document.getElementById('detail-total').innerHTML = totalHtml;
+  document.getElementById('detail-view-bill-wrap').innerHTML = o.status!=='requested'
+    ? `<button class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="viewPreparedBill(${idx})">🧾 View bill</button>`
+    : '';
 };
+function viewPreparedBill(idx){
+  const o = shopOrders[idx];
+  const items = o.bt_order_items || [];
+  const billNo = o.bill_number ? String(o.bill_number).padStart(4,'0') : '----';
+  const dateStr = new Date(o.order_date).toLocaleDateString('en-GB');
+  const rows = items.map(i=>`
+    <tr><td class="desc">${i.product_name}</td><td class="c">${i.quantity}</td><td class="c">${Number(i.unit_price).toFixed(2)}</td><td class="c">${Number(i.line_total).toFixed(2)}</td></tr>`).join('');
+  const blankRows = Array.from({length: Math.max(0, 10 - items.length)}).map(()=>`
+    <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`
+    <html><head><title>Bill — ${currentShop.name}</title>
+    <style>
+      @page { size: 15cm 20cm; margin: 6mm 6mm 2.54cm 6mm; }
+      *{box-sizing:border-box;} html,body{height:100%;}
+      body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:0;font-size:11.5px;}
+      .sheet{width:100%;padding:2mm;min-height:100%;display:flex;flex-direction:column;}
+      .head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;}
+      .head .en{text-align:left;flex:1;} .head .ar{text-align:right;direction:rtl;flex:1;}
+      .head .brand{font-size:18px;font-weight:bold;margin:0;color:#1a3b8f;}
+      .head .brand-ar{font-size:21px;font-weight:bold;margin:0;color:#1a3b8f;}
+      .head .sub{font-size:11px;color:#1a3b8f;margin:2px 0 0;font-weight:bold;}
+      .head .ref{font-size:11px;color:#8B0000;font-weight:bold;margin-top:3px;}
+      .head .center{text-align:center;flex:1;}
+      .head .cart{font-size:34px;line-height:1;}
+      .head .fatura-ar{font-size:16px;font-weight:bold;color:#1a3b8f;margin:3px 0 0;direction:rtl;}
+      .head .fatura-en{font-size:13px;font-weight:bold;color:#1a3b8f;margin:1px 0 0;letter-spacing:1.5px;}
+      .meta{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:10px;padding:0 2px;}
+      .meta .ar{direction:rtl;}
+      .table-wrap{border:3px double #1a3b8f;border-radius:12px;overflow:hidden;margin-top:4px;flex:1;display:flex;flex-direction:column;}
+      table{width:100%;height:100%;border-collapse:collapse;}
+      th,td{border:1px solid #3a5199;padding:5px 7px;font-size:11.5px;}
+      th{background:#f0f0ee;text-align:center;font-weight:bold;}
+      th .en{display:block;font-size:10.5px;} th .ar{display:block;font-size:10.5px;direction:rtl;color:#333;}
+      td.desc{text-align:left;} td.c{text-align:center;}
+      .total-row td{font-weight:bold;background:#f7f5f0;} .total-row td.desc{text-align:right;direction:rtl;}
+      .foot{display:flex;justify-content:space-between;margin-top:12px;font-size:11.5px;}
+      .foot .line{border-top:1px solid #000;width:140px;text-align:center;padding-top:4px;}
+      .noprint{text-align:center;margin-top:16px;}
+      .noprint button{background:#1F4D3A;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;}
+    </style></head>
+    <body>
+      <div class="sheet">
+        <div class="head">
+          <div class="en"><p class="brand">Supplies</p><p class="sub">For foodstuffs</p><p class="ref">Bill No: ${billNo} &nbsp;|&nbsp; ${dateStr}</p></div>
+          <div class="center"><div class="cart">🛒</div><p class="fatura-ar">فاتورة</p><p class="fatura-en">INVOICE</p></div>
+          <div class="ar"><p class="brand-ar">تموينات</p><p class="sub">للمواد الغذائية</p></div>
+        </div>
+        <div class="meta">
+          <div>Customer: <strong>${currentShop.name}</strong></div>
+          <div class="ar">العميل: <strong>${currentShop.name}</strong></div>
+        </div>
+        <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:42%;"><span class="en">Description</span><span class="ar">البيان</span></th>
+            <th style="width:16%;"><span class="en">Qty</span><span class="ar">العدد</span></th>
+            <th style="width:21%;"><span class="en">Unit Price</span><span class="ar">السعر الإفرادي</span></th>
+            <th style="width:21%;"><span class="en">Total Price</span><span class="ar">السعر الإجمالي</span></th>
+          </tr></thead>
+          <tbody>
+            ${rows}${blankRows}
+            <tr class="total-row"><td class="desc" colspan="3">Total / الإجمالي</td><td class="c">SAR ${Number(o.total_amount).toFixed(2)}</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="foot"><div class="line">Signature / التوقيع</div><div class="line">Date / التاريخ</div></div>
+        <div class="noprint"><button onclick="window.print()">Print this bill</button></div>
+      </div>
+    </body></html>
+  `);
+  w.document.close();
+}
 document.getElementById('detail-back').addEventListener('click', ()=>{
   document.getElementById('detail-step').classList.add('hide');
   document.getElementById('order-step').classList.remove('hide');
