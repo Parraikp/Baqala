@@ -352,9 +352,9 @@ function viewPreparedBill(idx){
   const blankRows = Array.from({length: Math.max(0, 16 - items.length)}).map(()=>`
     <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
   const w = window.open('', '_blank');
-  w.document.write(`
+  const htmlContent = `
     <html><head><title>Bill — ${currentShop.name}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
     <style>
       @page { size: 15cm 20cm; margin: 6mm 6mm 2.54cm 6mm; }
@@ -439,8 +439,10 @@ function viewPreparedBill(idx){
         }
       <\/script>
     </body></html>
-  `);
-  w.document.close();
+  `;
+  const blob = new Blob([htmlContent], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  if(w) w.location.href = url; else window.open(url, '_blank');
 }
 document.getElementById('detail-back').addEventListener('click', ()=>{
   document.getElementById('detail-step').classList.add('hide');

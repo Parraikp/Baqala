@@ -1126,9 +1126,9 @@ function printReport(){
   const shopRows = Object.entries(d.byShop).map(([name,x])=>`<tr><td>${name}</td><td class="c">${x.orders}</td><td class="c">SAR ${x.amount.toFixed(2)}</td></tr>`).join('');
   const supRows = Object.entries(d.bySupplier).map(([name,amt])=>`<tr><td>${name}</td><td class="c">SAR ${amt.toFixed(2)}</td></tr>`).join('');
   const w = window.open('', '_blank');
-  w.document.write(`
+  const reportHtml = `
     <html><head><title>Report ${d.from} to ${d.to}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <style>
       @page { size: A4; margin: 20mm; }
       body{font-family:Arial,sans-serif;color:#1a1a1a;}
@@ -1159,8 +1159,10 @@ function printReport(){
       <table><tr><th>Supplier</th><th class="c">Amount spent</th></tr>${supRows}</table>
       <script>window.print();<\/script>
     </body></html>
-  `);
-  w.document.close();
+  `;
+  const reportBlob = new Blob([reportHtml], {type: 'text/html'});
+  const reportUrl = URL.createObjectURL(reportBlob);
+  if(w) w.location.href = reportUrl; else window.open(reportUrl, '_blank');
 }
 
 /* ---- Print bill ---- */
@@ -1183,9 +1185,9 @@ function printBill(orderId, mode){
       <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
 
     const w = window.open('', '_blank');
-    w.document.write(`
+    const billHtml = `
       <html><head><title>Bill — ${shopName}</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
       <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
       <style>
         @page { size: 15cm 20cm; margin: 6mm 6mm 2.54cm 6mm; }
@@ -1294,8 +1296,10 @@ function printBill(orderId, mode){
         <\/script>
         ${mode==='print' ? `<script>window.print();<\/script>` : ''}
       </body></html>
-    `);
-    w.document.close();
+    `;
+    const billBlob = new Blob([billHtml], {type: 'text/html'});
+    const billUrl = URL.createObjectURL(billBlob);
+    if(w) w.location.href = billUrl; else window.open(billUrl, '_blank');
   };
   if(o){ render(o); return; }
   sb.from('bt_orders').select('*, bt_shops(name), bt_order_items(*)').eq('id', orderId).single()
@@ -1514,9 +1518,9 @@ function printPurchaseList(supName, rows, mode){
   mode = mode || 'print';
   const rowsHtml = rows.map((r,idx)=>`<tr><td class="c">${idx+1}</td><td>${r.name}</td><td class="c">${r.qty} ${r.unit||''}</td></tr>`).join('');
   const w = window.open('', '_blank');
-  w.document.write(`
+  const purchaseHtml = `
     <html><head><title>Purchase order — ${supName}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <style>
       @page { size: A4; margin: 20mm; }
       body{font-family:Arial,sans-serif;color:#1a1a1a;display:flex;justify-content:center;}
@@ -1544,8 +1548,10 @@ function printPurchaseList(supName, rows, mode){
       </div>
       ${mode==='print' ? `<script>window.print();<\/script>` : ''}
     </body></html>
-  `);
-  w.document.close();
+  `;
+  const purchaseBlob = new Blob([purchaseHtml], {type: 'text/html'});
+  const purchaseUrl = URL.createObjectURL(purchaseBlob);
+  if(w) w.location.href = purchaseUrl; else window.open(purchaseUrl, '_blank');
 }
 
 /* ============ REPORTS ============ */
