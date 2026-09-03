@@ -1176,7 +1176,7 @@ function printBill(orderId, mode){
         <td class="c">${Number(i.unit_price).toFixed(2)}</td>
         <td class="c">${Number(i.line_total).toFixed(2)}</td>
       </tr>`).join('');
-    const blankRows = Array.from({length: Math.max(0, 8 - items.length)}).map(()=>`
+    const blankRows = Array.from({length: Math.max(0, 10 - items.length)}).map(()=>`
       <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
 
     const w = window.open('', '_blank');
@@ -1184,7 +1184,7 @@ function printBill(orderId, mode){
       <html><head><title>Bill — ${shopName}</title>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
       <style>
-        @page { size: 21cm 15cm; margin: 6mm 6mm 2.54cm 6mm; }
+        @page { size: 15cm 20cm; margin: 6mm 6mm 2.54cm 6mm; }
         *{box-sizing:border-box;}
         html,body{height:100%;}
         body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:0;font-size:11.5px;height:100%;}
@@ -1274,7 +1274,7 @@ function printBill(orderId, mode){
             html2pdf().set({
               filename: 'Bill-${billNo}-${shopName.replace(/[^a-zA-Z0-9]/g,'_')}.pdf',
               margin: 0,
-              jsPDF: { unit: 'cm', format: [21, 15], orientation: 'landscape' },
+              jsPDF: { unit: 'cm', format: [15, 20], orientation: 'portrait' },
               html2canvas: { scale: 2 }
             }).from(document.querySelector('.sheet')).save().then(function(){
               btns.style.visibility = 'visible';
