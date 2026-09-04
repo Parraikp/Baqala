@@ -1589,6 +1589,7 @@ function printPurchaseList(supName, rows, mode, supPhone){
     <html><head><title>Purchase order — ${supName}</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
     <style>
       @page { size: A4; margin: 20mm; }
       body{font-family:Arial,sans-serif;color:#1a1a1a;display:flex;justify-content:center;}
@@ -1601,21 +1602,62 @@ function printPurchaseList(supName, rows, mode, supPhone){
       td.c,th.c{text-align:center;}
       td:nth-child(2){text-align:left;}
       tr:nth-child(even) td{background:#f7f7f5;}
-      .noprint{text-align:center;margin-top:18px;display:flex;gap:10px;justify-content:center;}
+      .noprint{text-align:center;margin-top:18px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
       .noprint button, .noprint a{background:#1F4D3A;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;text-decoration:none;display:inline-block;}
       .noprint a.wa{background:#25D366;}
+      .noprint button.share{background:#25D366;}
+      #pdf-status{text-align:center;font-size:12px;color:#666;margin-top:10px;display:none;}
     </style></head>
     <body>
       <div class="wrap">
-        <h1>Purchase order</h1>
-        <p class="sub">${supName} &nbsp;·&nbsp; ${new Date().toLocaleDateString('en-GB')}</p>
-        <table>
-          <tr><th style="width:8%;">#</th><th>Item</th><th style="width:22%;">Quantity</th></tr>
-          ${rowsHtml}
-        </table>
-        ${mode==='view' ? `<div class="noprint"><a class="wa" href="${waLink}" target="_blank">💬 Send WhatsApp</a><button onclick="window.print()">Print this list</button></div>` : ''}
+        <div id="pdf-capture">
+          <h1>Purchase order</h1>
+          <p class="sub">${supName} &nbsp;·&nbsp; ${new Date().toLocaleDateString('en-GB')}</p>
+          <table>
+            <tr><th style="width:8%;">#</th><th>Item</th><th style="width:22%;">Quantity</th></tr>
+            ${rowsHtml}
+          </table>
+        </div>
+        ${mode==='view' ? `
+        <div class="noprint">
+          <button class="share" onclick="sharePdfToWhatsApp()">📄 Send PDF via WhatsApp</button>
+          <a class="wa" href="${waLink}" target="_blank">💬 Text only</a>
+          <button onclick="window.print()">Print this list</button>
+        </div>
+        <p id="pdf-status"></p>` : ''}
       </div>
       ${mode==='print' ? `<script>window.print();<\/script>` : ''}
+      <script>
+        async function sharePdfToWhatsApp(){
+          const statusEl = document.getElementById('pdf-status');
+          statusEl.style.display = 'block';
+          statusEl.textContent = 'Preparing PDF...';
+          try{
+            const blob = await html2pdf().set({
+              margin: 10,
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+              html2canvas: { scale: 2 }
+            }).from(document.getElementById('pdf-capture')).outputPdf('blob');
+            const file = new File([blob], 'Purchase-order-${supName.replace(/[^a-zA-Z0-9]/g,'_')}.pdf', {type:'application/pdf'});
+            if(navigator.canShare && navigator.canShare({files:[file]})){
+              statusEl.textContent = '';
+              await navigator.share({
+                files: [file],
+                title: 'Purchase order — ${supName}',
+                text: 'Purchase order for ${supName}'
+              });
+            } else {
+              // fallback: download the PDF and let the person attach it manually
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = file.name; a.click();
+              statusEl.textContent = 'Your browser can\\'t share files directly — PDF downloaded, please attach it manually in WhatsApp.';
+            }
+          }catch(e){
+            statusEl.textContent = 'Could not prepare the PDF: ' + e.message;
+          }
+        }
+      <\/script>
     </body></html>
   `;
   const purchaseBlob = new Blob([purchaseHtml], {type: 'text/html;charset=utf-8'});
