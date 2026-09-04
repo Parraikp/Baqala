@@ -114,10 +114,16 @@
   .btn-danger-text{background:transparent;color:var(--red);padding:8px 4px;}
   .fab{
     position:fixed;bottom:96px;right:calc(50% - 240px + 20px);
-    width:48px;height:48px;border-radius:50%;background:var(--marigold);color:#fff;
-    border:none;font-size:22px;box-shadow:0 6px 16px rgba(226,163,61,.45);cursor:pointer;z-index:20;
+    width:56px;height:56px;border-radius:50%;
+    background:linear-gradient(135deg, #F0B74E 0%, var(--marigold) 55%, #C87F1E 100%);
+    color:#fff;border:2.5px solid rgba(255,255,255,.55);
+    font-size:26px;font-weight:600;
+    box-shadow:0 8px 20px rgba(226,163,61,.55), 0 2px 6px rgba(0,0,0,.15);
+    cursor:pointer;z-index:20;
     display:flex;align-items:center;justify-content:center;
+    transition:transform .12s ease;
   }
+  .fab:active{transform:scale(0.92);}
   @media (max-width:520px){.fab{right:20px;}}
   main{padding-bottom:110px;}
 
@@ -543,15 +549,17 @@ function orderCardHTML(o){
   const paidLine = o.status==='partial'
     ? `<p class="meta" style="color:var(--green);">Paid ${fmt(paid)} · Balance ${fmt(balance)}</p>`
     : '';
-  return `<div class="row-card" onclick="viewOrder('${o.id}')">
-    <div class="icon">${initials(shopName)}</div>
+  const shopIdx = SHOPS.findIndex(s=>s.id===o.shop_id);
+  const c = PURCHASE_COLORS[(shopIdx>=0?shopIdx:0) % PURCHASE_COLORS.length];
+  return `<div class="row-card" style="border-left:4px solid ${c};background:${c}0a;" onclick="viewOrder('${o.id}')">
+    <div class="icon" style="background:${c};color:#fff;">${initials(shopName)}</div>
     <div class="body">
       <p class="title">${shopName}</p>
       <p class="meta">${itemsLabel || 'No items'} · ${itemCount} item${itemCount!==1?'s':''}</p>
       ${paidLine}
     </div>
     <div class="right">
-      <p class="amount">${fmt(o.total_amount)}</p>
+      <p class="amount" style="color:${c};">${fmt(o.total_amount)}</p>
       <span class="tag ${o.status}">${o.status}</span>
     </div>
   </div>`;
