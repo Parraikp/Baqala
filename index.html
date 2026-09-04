@@ -1588,11 +1588,11 @@ function printPurchaseList(supName, rows, mode){
     <style>
       @page { size: A4; margin: 20mm; }
       body{font-family:Arial,sans-serif;color:#1a1a1a;display:flex;justify-content:center;}
-      .wrap{width:80%;max-width:420px;padding-top:20mm;}
+      .wrap{width:92%;max-width:600px;padding-top:20mm;}
       h1{font-size:20px;margin:0 0 4px;text-align:center;}
       p.sub{color:#555;font-size:13px;margin:0 0 22px;text-align:center;}
-      table{width:100%;border-collapse:collapse;}
-      th,td{padding:8px 10px;border:1px solid #999;font-size:13px;}
+      table{width:100%;border-collapse:collapse;table-layout:fixed;}
+      th,td{padding:4px 8px;border:1px solid #999;font-size:12.5px;}
       th{background:#1F4D3A;color:#fff;text-align:center;}
       td.c,th.c{text-align:center;}
       td:nth-child(2){text-align:left;}
@@ -1605,7 +1605,7 @@ function printPurchaseList(supName, rows, mode){
         <h1>Purchase order</h1>
         <p class="sub">${supName} &nbsp;·&nbsp; ${new Date().toLocaleDateString('en-GB')}</p>
         <table>
-          <tr><th style="width:14%;">#</th><th>Item</th><th style="width:28%;">Quantity</th></tr>
+          <tr><th style="width:8%;">#</th><th>Item</th><th style="width:22%;">Quantity</th></tr>
           ${rowsHtml}
         </table>
         ${mode==='view' ? `<div class="noprint"><button onclick="window.print()">Print this list</button></div>` : ''}
