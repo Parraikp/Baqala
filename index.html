@@ -884,6 +884,7 @@ function viewOrder(id){
       <button class="btn" style="flex:1;background:#3A5199;color:#fff;" onclick="printBill('${o.id}', 'view')">View bill</button>
       <button class="btn" style="flex:1;background:#1A8FA6;color:#fff;" onclick="printBill('${o.id}', 'print')">Print bill</button>
     </div>
+    <button class="btn" style="width:100%;margin-top:8px;background:#8a5cf6;color:#fff;" onclick="printBill80('${o.id}')">🧾 80mm receipt</button>
     <div style="margin-top:8px;">
       ${o.status !== 'paid' ? `<button class="btn btn-primary" style="width:100%;" onclick="openPaymentForm('${o.shop_id}', '${o.id}')">Record payment</button>` : ''}
     </div>
@@ -1223,6 +1224,81 @@ function printReport(){
   const reportBlob = new Blob([reportHtml], {type: 'text/html;charset=utf-8'});
   const reportUrl = URL.createObjectURL(reportBlob);
   if(w) w.location.href = reportUrl; else window.open(reportUrl, '_blank');
+}
+
+/* ---- 80mm receipt print (for portable thermal printers) ---- */
+function printBill80(orderId){
+  const o = ORDERS.find(x=>x.id===orderId) || null;
+  const render = (order)=>{
+    const shopName = order.bt_shops?.name || SHOPS.find(s=>s.id===order.shop_id)?.name || 'Shop';
+    const items = order.bt_order_items || [];
+    const billNo = order.bill_number ? String(order.bill_number).padStart(4,'0') : '----';
+    const dateStr = new Date(order.order_date).toLocaleDateString('en-GB');
+    const rows = items.map(i=>`
+      <tr>
+        <td class="it">${i.product_name}</td>
+        <td class="c">${i.quantity}</td>
+        <td class="r">${Number(i.unit_price).toFixed(2)}</td>
+        <td class="r">${Number(i.line_total).toFixed(2)}</td>
+      </tr>`).join('');
+
+    const w = window.open('', '_blank');
+    const receiptHtml = `
+      <html><head><title>Receipt — ${shopName}</title>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+      <style>
+        @page { size: 80mm auto; margin: 3mm; }
+        *{box-sizing:border-box;}
+        body{font-family:Arial,Tahoma,sans-serif;color:#111;margin:0;padding:16px 0;background:#ddd;display:flex;justify-content:center;font-size:12px;}
+        .sheet{width:80mm;max-width:100%;background:#fff;padding:4mm;box-shadow:0 2px 10px rgba(0,0,0,.15);}
+        @media print{ body{background:#fff;padding:0;} .sheet{box-shadow:none;padding:2mm;} .noprint{display:none;} }
+        .brand-en{text-align:center;font-size:16px;font-weight:700;margin:0;letter-spacing:0.5px;}
+        .brand-ar{text-align:center;font-size:14px;font-weight:700;margin:1px 0 0;}
+        .sub{text-align:center;font-size:10px;color:#555;margin:2px 0 0;}
+        .rule{border-top:1.5px solid #111;margin:7px 0;}
+        .rule-dash{border-top:1px dashed #999;margin:7px 0;}
+        .meta{display:flex;justify-content:space-between;font-size:11px;margin:2px 0;}
+        .meta b{font-weight:700;}
+        table{width:100%;border-collapse:collapse;margin-top:4px;}
+        th{background:#f0f0f0;border:1px solid #ccc;padding:4px 3px;font-size:10px;font-weight:700;}
+        td{border:1px solid #ddd;padding:4px 3px;font-size:11px;}
+        .it{text-align:left;}
+        .c{text-align:center;}
+        .r{text-align:right;}
+        .total-row{display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-top:8px;padding-top:6px;border-top:2px solid #111;}
+        .foot{text-align:center;font-size:10px;color:#666;margin-top:14px;}
+        .sig{margin-top:22px;border-top:1px solid #111;padding-top:3px;font-size:10px;text-align:center;color:#444;}
+        .noprint{text-align:center;margin-top:16px;}
+        .noprint button{background:#1F4D3A;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;}
+      </style></head>
+      <body>
+        <div class="sheet">
+          <p class="brand-en">Supplies</p>
+          <p class="brand-ar">تموينات</p>
+          <p class="sub">For foodstuffs · للمواد الغذائية</p>
+          <div class="rule"></div>
+          <div class="meta"><span>Bill No: <b>${billNo}</b></span><span>${dateStr}</span></div>
+          <div class="meta"><span>Customer:</span><b>${shopName}</b></div>
+          <div class="rule-dash"></div>
+          <table>
+            <tr><th class="it">Item</th><th class="c">Qty</th><th class="r">Price</th><th class="r">Total</th></tr>
+            ${rows}
+          </table>
+          <div class="total-row"><span>TOTAL</span><span>SAR ${Number(order.total_amount).toFixed(2)}</span></div>
+          <div class="sig">Signature ______________</div>
+          <p class="foot">Thank you — شكراً</p>
+        </div>
+        <div class="noprint"><button onclick="window.print()">Print this receipt</button></div>
+      </body></html>
+    `;
+    const receiptBlob = new Blob([receiptHtml], {type: 'text/html;charset=utf-8'});
+    const receiptUrl = URL.createObjectURL(receiptBlob);
+    if(w) w.location.href = receiptUrl; else window.open(receiptUrl, '_blank');
+  };
+  if(o){ render(o); return; }
+  sb.from('bt_orders').select('*, bt_shops(name), bt_order_items(*)').eq('id', orderId).single()
+    .then(({data})=>{ if(data) render(data); });
 }
 
 /* ---- Print bill ---- */
