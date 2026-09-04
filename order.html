@@ -416,7 +416,7 @@ function viewPreparedBill(idx){
   const dateStr = new Date(o.order_date).toLocaleDateString('en-GB');
   const rows = items.map(i=>`
     <tr><td class="desc">${i.product_name}</td><td class="c">${i.quantity}</td><td class="c">${Number(i.unit_price).toFixed(2)}</td><td class="c">${Number(i.line_total).toFixed(2)}</td></tr>`).join('');
-  const blankRows = Array.from({length: Math.max(0, 20 - items.length)}).map(()=>`
+  const blankRows = Array.from({length: Math.max(0, 13 - items.length)}).map(()=>`
     <tr><td class="desc">&nbsp;</td><td class="c"></td><td class="c"></td><td class="c"></td></tr>`).join('');
   const w = window.open('', '_blank');
   const htmlContent = `
@@ -425,7 +425,7 @@ function viewPreparedBill(idx){
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
     <style>
-      @page { size: 15cm 20cm; margin: 6mm 6mm 2.54cm 6mm; }
+      @page { size: 15cm 20cm; margin: 6mm; }
       *{box-sizing:border-box;} html,body{height:100%;}
       body{font-family:Arial,Tahoma,sans-serif;color:#1a1a1a;margin:0;padding:24px 0;font-size:11.5px;background:#d8dad4;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
       .sheet{width:100%;max-width:15cm;min-height:20cm;padding:6mm;display:flex;flex-direction:column;background:#fff;box-shadow:0 3px 16px rgba(0,0,0,.18);}
