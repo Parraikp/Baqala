@@ -882,9 +882,8 @@ function viewOrder(id){
     <p class="profit-note">Profit on this order: ${fmt(o.total_amount - o.total_cost)}</p>
     <div style="display:flex;gap:8px;margin-top:16px;">
       <button class="btn" style="flex:1;background:#3A5199;color:#fff;" onclick="printBill('${o.id}', 'view')">View bill</button>
-      <button class="btn" style="flex:1;background:#1A8FA6;color:#fff;" onclick="printBill('${o.id}', 'print')">Print bill</button>
+      <button class="btn" style="flex:1;background:#1A8FA6;color:#fff;" onclick="printBill80('${o.id}', 'print')">Print bill</button>
     </div>
-    <button class="btn" style="width:100%;margin-top:8px;background:#8a5cf6;color:#fff;" onclick="printBill80('${o.id}')">🧾 80mm receipt</button>
     <div style="margin-top:8px;">
       ${o.status !== 'paid' ? `<button class="btn btn-primary" style="width:100%;" onclick="openPaymentForm('${o.shop_id}', '${o.id}')">Record payment</button>` : ''}
     </div>
@@ -1227,7 +1226,8 @@ function printReport(){
 }
 
 /* ---- 80mm receipt print (for portable thermal printers) ---- */
-function printBill80(orderId){
+function printBill80(orderId, mode){
+  mode = mode || 'view';
   const o = ORDERS.find(x=>x.id===orderId) || null;
   const fmtNum = n => Number.isInteger(Number(n)) ? String(Number(n)) : Number(n).toFixed(2);
   const render = (order)=>{
@@ -1254,6 +1254,7 @@ function printBill80(orderId){
         body{font-family:Arial,Tahoma,sans-serif;color:#111;margin:0;padding:16px 0;background:#ddd;display:flex;justify-content:center;font-size:12px;}
         .sheet{width:80mm;max-width:100%;background:#fff;padding:4mm;box-shadow:0 2px 10px rgba(0,0,0,.15);}
         @media print{ body{background:#fff;padding:0;} .sheet{box-shadow:none;padding:2mm;} .noprint{display:none;} }
+        .cart{text-align:center;font-size:26px;line-height:1;margin:0 0 2px;}
         .brand-en{text-align:center;font-size:16px;font-weight:700;margin:0;letter-spacing:0.5px;color:#1F4D3A;}
         .brand-ar{text-align:center;font-size:14px;font-weight:700;margin:1px 0 0;color:#1F4D3A;}
         .sub{text-align:center;font-size:10px;color:#555;margin:2px 0 0;}
@@ -1263,8 +1264,10 @@ function printBill80(orderId){
         .meta b{font-weight:700;}
         .table-wrap{border:3px double #1F4D3A;border-radius:10px;overflow:hidden;margin-top:6px;}
         table{width:100%;border-collapse:collapse;}
-        th{background:#EAF3EC;border-bottom:1.5px solid #1F4D3A;padding:5px 4px;font-size:10px;font-weight:700;color:#1F4D3A;}
-        td{padding:5px 4px;font-size:11px;border-bottom:1px solid #e5e5e5;}
+        th{background:#EAF3EC;border-bottom:1.5px solid #1F4D3A;border-right:1px solid #bcd7c3;padding:5px 4px;font-size:10px;font-weight:700;color:#1F4D3A;}
+        th:last-child{border-right:none;}
+        td{padding:5px 4px;font-size:11px;border-bottom:1px solid #e5e5e5;border-right:1px solid #e5e5e5;}
+        td:last-child{border-right:none;}
         tr.alt td{background:#F7FAF7;}
         tr:last-child td{border-bottom:none;}
         .it{text-align:left;}
@@ -1278,6 +1281,7 @@ function printBill80(orderId){
       </style></head>
       <body>
         <div class="sheet">
+          <p class="cart">🛒</p>
           <p class="brand-en">Supplies</p>
           <p class="brand-ar">تموينات</p>
           <p class="sub">For foodstuffs · للمواد الغذائية</p>
@@ -1294,7 +1298,8 @@ function printBill80(orderId){
           <div class="sig">Signature ______________</div>
           <p class="foot">Thank you — شكراً</p>
         </div>
-        <div class="noprint"><button onclick="window.print()">Print this receipt</button></div>
+        ${mode==='view' ? `<div class="noprint"><button onclick="window.print()">Print this receipt</button></div>` : ''}
+        ${mode==='print' ? `<script>window.print();<\/script>` : ''}
       </body></html>
     `;
     const receiptBlob = new Blob([receiptHtml], {type: 'text/html;charset=utf-8'});
