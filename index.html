@@ -596,7 +596,16 @@ function openShopForm(existing){
     <label>Notes</label>
     <textarea id="f-shop-notes" rows="2" placeholder="Optional">${s.notes||''}</textarea>
     <div style="margin-top:18px;"><button class="btn btn-primary" onclick="saveShop('${existing?existing.id:''}')">Save shop</button></div>
+    ${existing ? `<div style="text-align:center;margin-top:12px;"><button class="btn-danger-text" onclick="deleteShop('${existing.id}')">🗑️ Delete shop</button></div>` : ''}
   `);
+}
+async function deleteShop(id){
+  if(!confirm('Delete this shop? This will PERMANENTLY delete ALL of its orders and payment history too — not just the shop record. This cannot be undone.')) return;
+  const {error} = await sb.from('bt_shops').delete().eq('id', id);
+  if(error){ toast(error.message, true); return; }
+  toast('Shop deleted');
+  closeSheet();
+  await loadAll();
 }
 async function saveShop(id){
   const name = document.getElementById('f-shop-name').value.trim();
@@ -846,13 +855,16 @@ function viewOrder(id){
     <div class="sheet-head"><h3>${shopName}</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <p style="color:var(--ink-soft);font-size:12.5px;margin:-6px 0 14px;">${new Date(o.order_date).toDateString()} · <span class="tag ${o.status}">${o.status}</span></p>
     <div class="list">
-      ${items.map(i=>`<div class="row-card" style="cursor:default;">
+      ${items.map((i,idx)=>{
+        const c = PURCHASE_COLORS[idx % PURCHASE_COLORS.length];
+        return `<div class="row-card" style="cursor:default;background:${c}0d;border-left:4px solid ${c};">
+        <div class="icon" style="background:${c};color:#fff;font-size:12px;">${idx+1}</div>
         <div class="body">
           <p class="title">${i.product_name}</p>
           <p class="meta">${i.quantity} × ${fmt(i.unit_price)}</p>
         </div>
-        <div class="right"><p class="amount">${fmt(i.line_total)}</p></div>
-      </div>`).join('')}
+        <div class="right"><p class="amount" style="color:${c};">${fmt(i.line_total)}</p></div>
+      </div>`;}).join('')}
     </div>
     <div class="stat-grid" style="margin-top:14px;">
       <div class="stat"><p class="label">Total</p><p class="num">${fmt(o.total_amount)}</p></div>
@@ -861,14 +873,14 @@ function viewOrder(id){
     ${balance > 0.01 ? `<div class="stat due" style="margin-top:-8px;margin-bottom:14px;"><p class="label">Balance remaining</p><p class="num">${fmt(balance)}</p></div>` : ''}
     <p class="profit-note">Profit on this order: ${fmt(o.total_amount - o.total_cost)}</p>
     <div style="display:flex;gap:8px;margin-top:16px;">
-      <button class="btn btn-outline" style="flex:1" onclick="printBill('${o.id}', 'view')">View bill</button>
-      <button class="btn btn-outline" style="flex:1" onclick="printBill('${o.id}', 'print')">Print bill</button>
+      <button class="btn" style="flex:1;background:#3A5199;color:#fff;" onclick="printBill('${o.id}', 'view')">View bill</button>
+      <button class="btn" style="flex:1;background:#1A8FA6;color:#fff;" onclick="printBill('${o.id}', 'print')">Print bill</button>
     </div>
     <div style="margin-top:8px;">
       ${o.status !== 'paid' ? `<button class="btn btn-primary" style="width:100%;" onclick="openPaymentForm('${o.shop_id}', '${o.id}')">Record payment</button>` : ''}
     </div>
     <div style="text-align:center;margin-top:14px;">
-      <button class="btn-danger-text" onclick="deleteOrder('${o.id}')">Cancel / delete this order</button>
+      <button class="btn-danger-text" onclick="deleteOrder('${o.id}')">🗑️ Delete</button>
     </div>
   `);
 }
@@ -1401,7 +1413,16 @@ function openProductForm(existing){
     <select id="f-prod-supplier">${supplierOptions}</select>
     <p style="font-size:11.5px;color:var(--ink-soft);margin:10px 0 0;">Cost and selling price are entered when you price an order — not here.</p>
     <div style="margin-top:14px;"><button class="btn btn-primary" onclick="saveProduct('${existing?existing.id:''}')">Save product</button></div>
+    ${existing ? `<div style="text-align:center;margin-top:12px;"><button class="btn-danger-text" onclick="deleteProduct('${existing.id}')">🗑️ Delete</button></div>` : ''}
   `);
+}
+async function deleteProduct(id){
+  if(!confirm('Delete this product? Past orders that used it will keep their record, but it will no longer be selectable for new orders. This cannot be undone.')) return;
+  const {error} = await sb.from('bt_products').delete().eq('id', id);
+  if(error){ toast(error.message, true); return; }
+  toast('Product deleted');
+  closeSheet();
+  await loadAll();
 }
 async function saveProduct(id){
   const name = document.getElementById('f-prod-name').value.trim();
