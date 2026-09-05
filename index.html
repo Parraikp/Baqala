@@ -221,6 +221,12 @@
   .chip-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
   .panel-card{border-radius:16px;padding:16px;margin-bottom:16px;border:1.5px solid var(--line);}
+
+  .sub-toggle{display:flex;gap:8px;margin-bottom:16px;}
+  .sub-toggle-btn{flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);
+    font-size:13.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:background .15s,color .15s;}
+  .sub-toggle-btn.supplier-toggle.active{background:var(--green);color:#fff;border-color:var(--green);}
+  .sub-toggle-btn.product-toggle.active{background:var(--marigold);color:#1a1a1a;border-color:var(--marigold);}
   .panel-suppliers{background:linear-gradient(160deg, #EAF3EC 0%, var(--card) 55%);border-color:#cfe3d5;}
   .panel-products{background:linear-gradient(160deg, #FBF1DE 0%, var(--card) 55%);border-color:#f0dcae;}
   .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;}
@@ -347,7 +353,12 @@
 
     <!-- REPORTS (Suppliers & Products) -->
     <section class="view" id="view-reports">
-      <div class="panel-card panel-suppliers">
+      <div class="sub-toggle">
+        <button class="sub-toggle-btn active supplier-toggle" id="toggle-suppliers-btn" onclick="switchSubPanel('suppliers')">🚚 Suppliers</button>
+        <button class="sub-toggle-btn product-toggle" id="toggle-products-btn" onclick="switchSubPanel('products')">🧺 Products</button>
+      </div>
+
+      <div class="panel-card panel-suppliers" id="panel-suppliers-section">
         <div class="panel-head">
           <div>
             <h2>Suppliers <span class="ur">سپلائرز</span></h2>
@@ -358,7 +369,7 @@
         <div id="suppliers-list"><div class="spinner"></div></div>
       </div>
 
-      <div class="panel-card panel-products">
+      <div class="panel-card panel-products hide" id="panel-products-section">
         <div class="panel-head">
           <div>
             <h2>Products <span class="ur">پروڈکٹس</span></h2>
@@ -1548,6 +1559,19 @@ async function saveProduct(id){
 }
 
 /* ============ SUPPLIERS ============ */
+function switchSubPanel(which){
+  const supBtn = document.getElementById('toggle-suppliers-btn');
+  const prodBtn = document.getElementById('toggle-products-btn');
+  const supSec = document.getElementById('panel-suppliers-section');
+  const prodSec = document.getElementById('panel-products-section');
+  if(which==='suppliers'){
+    supBtn.classList.add('active'); prodBtn.classList.remove('active');
+    supSec.classList.remove('hide'); prodSec.classList.add('hide');
+  } else {
+    prodBtn.classList.add('active'); supBtn.classList.remove('active');
+    prodSec.classList.remove('hide'); supSec.classList.add('hide');
+  }
+}
 function renderSuppliers(){
   const wrap = document.getElementById('suppliers-list');
   if(!wrap) return;
