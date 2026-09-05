@@ -136,15 +136,17 @@
   nav.tabbar button{
     flex:1;background:none;border:none;padding:8px 0 7px;cursor:pointer;border-radius:13px;
     display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-soft);font-family:'Inter';
-    transition:background .15s, color .15s;
+    transition:background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
   }
-  nav.tabbar button svg{width:20px;height:20px;}
+  nav.tabbar button svg{width:20px;height:20px;transition:transform .18s ease;}
   nav.tabbar button span{font-size:10.5px;font-weight:600;}
-  nav.tabbar button[data-view="home"].active{color:#fff;background:var(--green);}
-  nav.tabbar button[data-view="shops"].active{color:#fff;background:#3A5199;}
-  nav.tabbar button[data-view="orders"].active{color:#1a1a1a;background:var(--marigold);}
-  nav.tabbar button[data-view="accounts"].active{color:#fff;background:#1A8FA6;}
-  nav.tabbar button[data-view="reports"].active{color:#fff;background:#8a5cf6;}
+  nav.tabbar button.active{transform:translateY(-4px);}
+  nav.tabbar button.active svg{transform:scale(1.08);}
+  nav.tabbar button[data-view="home"].active{color:#fff;background:var(--green);box-shadow:0 6px 14px rgba(31,77,58,.35);}
+  nav.tabbar button[data-view="shops"].active{color:#fff;background:#3A5199;box-shadow:0 6px 14px rgba(58,81,153,.35);}
+  nav.tabbar button[data-view="orders"].active{color:#1a1a1a;background:var(--marigold);box-shadow:0 6px 14px rgba(226,163,61,.4);}
+  nav.tabbar button[data-view="accounts"].active{color:#fff;background:#1A8FA6;box-shadow:0 6px 14px rgba(26,143,166,.35);}
+  nav.tabbar button[data-view="reports"].active{color:#fff;background:#8a5cf6;box-shadow:0 6px 14px rgba(138,92,246,.35);}
 
   /* Modal / sheet */
   .sheet-backdrop{
@@ -305,6 +307,9 @@
       <div class="section-title">
         <h2>All orders</h2>
       </div>
+      <button class="btn" style="width:100%;background:var(--green);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;" onclick="openOrderForm()">
+        + Make order for shopkeeper
+      </button>
       <button class="btn" style="width:100%;background:var(--marigold);color:#1a1a1a;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;" onclick="goto('purchase')">
         🛒 Purchase list
       </button>
@@ -383,8 +388,6 @@
     </section>
 
   </main>
-
-  <button class="fab" onclick="openOrderForm()">+</button>
 
   <nav class="tabbar">
     <button class="tab-btn active" data-view="home" onclick="goto('home')">
