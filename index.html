@@ -1673,7 +1673,8 @@ function renderPurchaseList(){
       </div>
       <div class="purchase-group-body" id="pg-body-${idx}" style="display:none;">
         <div class="list">${rowsHtml}</div>
-        <button class="btn" style="width:100%;margin-top:10px;background:#25D366;color:#fff;font-weight:700;" onclick='sharePurchasePdf(${JSON.stringify(supName)}, ${JSON.stringify(g.rows)}, ${JSON.stringify(g.supplier?g.supplier.contact_number:"")})'>📄 Send PDF via WhatsApp</button>
+        <button class="btn" style="width:100%;margin-top:10px;background:${color};color:#fff;" onclick='printPurchaseList(${JSON.stringify(supName)}, ${JSON.stringify(g.rows)}, "view", ${JSON.stringify(g.supplier?g.supplier.contact_number:"")})'>👁 View list</button>
+        <button class="btn" style="width:100%;margin-top:8px;background:#25D366;color:#fff;font-weight:700;" onclick='sharePurchasePdf(${JSON.stringify(supName)}, ${JSON.stringify(g.rows)}, ${JSON.stringify(g.supplier?g.supplier.contact_number:"")})'>📄 Send PDF via WhatsApp</button>
       </div>
     </div>`;
   }).join('');
